@@ -5,28 +5,12 @@
       <v-form @submit.prevent="addItem" v-if="!saleComplete">
         <v-row class="g-1" align="center">
           <v-col cols="12">
-            <v-select
-              :items="products"
-              item-title="name"
-              item-value="name"
-              label="Produto"
-              v-model="currentItem.product"
-              density="comfortable"
-              hide-details
-              required
-            />
+            <v-select :items="products" item-title="name" item-value="name" label="Produto"
+              v-model="currentItem.product" density="comfortable" hide-details required />
           </v-col>
           <v-col cols="12">
-            <v-text-field
-              v-model.number="currentItem.quantity"
-              label="Quantidade"
-              type="number"
-              min="1"
-              density="comfortable"
-              hide-details
-              required
-              inputmode="numeric"
-            />
+            <v-text-field v-model.number="currentItem.quantity" label="Quantidade" type="number" min="1"
+              density="comfortable" hide-details required inputmode="numeric" />
           </v-col>
           <v-col cols="12" v-if="currentPrice > 0">
             <div class="text-body-2 text-end">Preço unitário: <strong>€{{ currentPrice.toFixed(2) }}</strong></div>
@@ -37,7 +21,8 @@
       <v-list v-if="cart.length && !saleComplete" density="compact" class="bg-transparent">
         <v-list-item v-for="(item, idx) in cart" :key="idx" class="py-1 px-0">
           <v-list-item-title class="text-body-2">
-            {{ item.product }} × {{ item.quantity }} @ €{{ getUnitPrice(item.product) }} = <strong>€{{ getProductPrice(item.product, item.quantity) }}</strong>
+            {{ item.product }} × {{ item.quantity }} @ €{{ getUnitPrice(item.product) }} = <strong>€{{
+              getProductPrice(item.product, item.quantity) }}</strong>
           </v-list-item-title>
           <template #append>
             <v-btn icon @click="removeItem(idx)" size="x-small" color="red">
@@ -50,21 +35,14 @@
       <div v-if="cart.length && !saleComplete">
         <div class="text-end mb-4">Total: <strong>€{{ total }}</strong></div>
         <v-form @submit.prevent="finalizeSale">
-          <v-text-field
-            v-model.number="given"
-            label="Valor dado pelo cliente (€) — opcional"
-            type="number"
-            inputmode="decimal"
-            density="comfortable"
-            hide-details
-            class="mb-4"
-          />
+          <v-text-field v-model.number="given" label="Valor dado pelo cliente (€) — opcional" type="number"
+            inputmode="decimal" density="comfortable" hide-details class="mb-4" />
           <v-btn type="submit" color="success" block class="mb-2">Finalizar Venda e Calcular Troco</v-btn>
         </v-form>
       </div>
       <!-- Resumo -->
-      <div v-if="saleComplete" class="pa-2">
-        <h3 class="text-h6 mb-2 text-center">Resumo da Venda</h3>
+      <div v-if="saleComplete" class="pa-4 bg-grey-lighten-4 rounded">
+        <h3 class="text-h6 mb-3 text-center text-primary">Resumo da Venda</h3>
         <v-list density="compact" class="bg-transparent">
           <v-list-item v-for="(item, idx) in lastSale.items" :key="idx">
             <v-list-item-title class="text-body-2">
@@ -72,10 +50,12 @@
             </v-list-item-title>
           </v-list-item>
         </v-list>
-        <v-divider class="my-2" />
-        <div class="text-end">Total: <strong>€{{ lastSale.total.toFixed(2) }}</strong></div>
-        <div class="text-end">Valor dado: <strong>€{{ lastSale.given.toFixed(2) }}</strong></div>
-        <div class="text-end">Troco: <strong>€{{ lastSale.change }}</strong></div>
+        <v-divider class="my-3" />
+        <div class="text-end text-h6">Total: <strong class="text-success">€{{ lastSale.total.toFixed(2) }}</strong>
+        </div>
+        <div class="text-end text-h6">Valor dado: <strong class="text-warning">€{{ lastSale.given.toFixed(2) }}</strong>
+        </div>
+        <div class="text-end text-h5">Troco: <strong class="text-error">€{{ lastSale.change }}</strong></div>
         <v-btn color="primary" block class="mt-4" @click="novaVenda">Nova Venda</v-btn>
       </div>
     </v-card-text>
@@ -127,7 +107,7 @@ function finalizeSale() {
   let valorDado = (given.value == null || given.value === '') ? Number(total.value) : Number(given.value)
   change.value = (valorDado - total.value).toFixed(2)
   const reg = {
-    items: cart.value.map(i => ({...i})),
+    items: cart.value.map(i => ({ ...i })),
     total: Number(total.value),
     given: valorDado,
     change: change.value,
