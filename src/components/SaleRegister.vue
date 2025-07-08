@@ -129,7 +129,7 @@ function gerarTalao() {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   const lineHeight = 20
-  const margin = 10
+  const margin = 20
   const width = 280
   const lines = []
 
