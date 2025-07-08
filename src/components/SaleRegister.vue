@@ -130,33 +130,44 @@ function gerarTalao() {
   const ctx = canvas.getContext('2d')
   const lineHeight = 20
   const margin = 10
+  const width = 280
   const lines = []
-  lines.push(eventName.value || 'Venda')
-  lines.push('----------------')
+
+  lines.push({ text: eventName.value || 'Venda', center: true })
+  lines.push({ text: '----------------', center: true })
   lastSale.value.items.forEach(it => {
     const total = getProductPrice(it.product, it.quantity)
-    lines.push(`${it.product} x${it.quantity} = €${total}`)
+    lines.push({ left: `${it.product} x${it.quantity}`, right: `€${total}` })
   })
-  lines.push('----------------')
-  lines.push(`Total: €${lastSale.value.total.toFixed(2)}`)
-  lines.push(`Valor dado: €${lastSale.value.given.toFixed(2)}`)
-  lines.push(`Troco: €${lastSale.value.change}`)
-  lines.push(new Date(lastSale.value.date).toLocaleString())
-  lines.push('Este talão não tem valor legal')
-  canvas.width = 280
+  lines.push({ text: '----------------', center: true })
+  lines.push({ left: 'Total', right: `€${lastSale.value.total.toFixed(2)}` })
+  lines.push({ left: 'Valor dado', right: `€${lastSale.value.given.toFixed(2)}` })
+  lines.push({ left: 'Troco', right: `€${lastSale.value.change}` })
+  lines.push({ text: new Date(lastSale.value.date).toLocaleString(), center: true })
+  lines.push({ text: 'Este talão não tem valor legal', center: true })
+
+  canvas.width = width
   canvas.height = margin * 2 + lines.length * lineHeight
   ctx.fillStyle = '#fff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.fillStyle = '#000'
   ctx.font = '16px sans-serif'
+
   lines.forEach((line, idx) => {
-    ctx.fillText(line, margin, margin + idx * lineHeight)
+    const y = margin + idx * lineHeight
+    if (line.center) {
+      ctx.textAlign = 'center'
+      ctx.fillText(line.text, width / 2, y)
+    } else {
+      ctx.textAlign = 'left'
+      ctx.fillText(line.left, margin, y)
+      ctx.textAlign = 'right'
+      ctx.fillText(line.right, width - margin, y)
+    }
   })
+
   const url = canvas.toDataURL('image/png')
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'talao.png'
-  link.click()
+  window.open(url, '_blank')
 }
 function novaVenda() {
   cart.value = []
