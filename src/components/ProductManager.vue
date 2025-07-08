@@ -39,8 +39,12 @@
             {{ p.name }} <span class="grey--text">— €{{ p.price.toFixed(2) }}</span>
           </v-list-item-title>
           <template #append>
-            <v-btn icon @click="edit(idx)" size="x-small"><v-icon size="x-small">mdi-pencil</v-icon></v-btn>
-            <v-btn icon @click="remove(idx)" size="x-small" color="red"><v-icon size="x-small">mdi-delete</v-icon></v-btn>
+            <v-btn icon @click="edit(idx)" size="x-small" :disabled="productHasSales(p.name)">
+              <v-icon size="x-small">mdi-pencil</v-icon>
+            </v-btn>
+            <v-btn icon @click="remove(idx)" size="x-small" color="red" :disabled="productHasSales(p.name)">
+              <v-icon size="x-small">mdi-delete</v-icon>
+            </v-btn>
           </template>
         </v-list-item>
       </v-list>
@@ -48,10 +52,11 @@
   </v-card>
 </template>
 <script setup>
-import { ref, toRefs } from 'vue'
+import { ref, toRefs, inject } from 'vue'
 const props = defineProps(['products'])
 const emit = defineEmits(['update'])
 const { products } = toRefs(props)
+const sales = inject('sales', ref([]))
 const editProduct = ref({ name: '', price: null })
 const editIdx = ref(null)
 function saveProduct() {
@@ -67,6 +72,11 @@ function saveProduct() {
   editIdx.value = null
 }
 function edit(idx) {
+  const name = products.value[idx]?.name
+  if (productHasSales(name)) {
+    alert('Não é possível editar um produto que já foi vendido.')
+    return
+  }
   editIdx.value = idx
   editProduct.value = { ...products.value[idx] }
 }
@@ -75,8 +85,22 @@ function cancelEdit() {
   editProduct.value = { name: '', price: null }
 }
 function remove(idx) {
+  const name = products.value[idx]?.name
+  if (productHasSales(name)) {
+    alert('Não é possível remover um produto que já foi vendido.')
+    return
+  }
   let updated = [...products.value]
   updated.splice(idx, 1)
   emit('update', updated)
+}
+
+function productHasSales(name) {
+  if (!sales?.value || !Array.isArray(sales.value)) return false
+  const target = String(name).trim().toLowerCase()
+  return sales.value.some(sale =>
+    Array.isArray(sale.items) &&
+    sale.items.some(it => String(it.product).trim().toLowerCase() === target)
+  )
 }
 </script>
