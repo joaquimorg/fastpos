@@ -10,6 +10,7 @@
         <v-btn to="/" text tag="router-link">Registar Venda</v-btn>
         <v-btn to="/produtos" text tag="router-link">Produtos</v-btn>
         <v-btn to="/resumo" text tag="router-link">Resumo do Dia</v-btn>
+        <v-btn to="/ajuda" text tag="router-link">Ajuda</v-btn>
       </v-row>
     </v-app-bar>
     <v-navigation-drawer v-model="drawer" app temporary class="d-md-none">
@@ -17,6 +18,7 @@
         <v-list-item to="/" tag="router-link">Registar Venda</v-list-item>
         <v-list-item to="/produtos" tag="router-link">Produtos</v-list-item>
         <v-list-item to="/resumo" tag="router-link">Resumo do Dia</v-list-item>
+        <v-list-item to="/ajuda" tag="router-link">Ajuda</v-list-item>
       </v-list>
     </v-navigation-drawer>
     <v-main>
