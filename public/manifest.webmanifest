@@ -1,0 +1,16 @@
+{
+  "name": "fastPOS",
+  "short_name": "fastPOS",
+  "theme_color": "#7ecdf5",
+  "background_color": "#C5C5C5",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "fastpos-192.png",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
