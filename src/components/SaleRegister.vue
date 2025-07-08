@@ -1,8 +1,8 @@
 <template>
   <v-card class="mx-auto my-2" max-width="480" elevation="5">
     <v-card-title class="text-h6 text-center">
-      <template v-if="eventName.value">
-        {{ eventName.value }}<br />
+      <template v-if="eventName">
+        <strong class="text-success">{{ eventName }}</strong><br />
       </template>
       Registar Venda
     </v-card-title>
@@ -69,10 +69,10 @@
 </template>
 <script setup>
 import { ref, computed, toRefs, inject } from 'vue'
-const props = defineProps(['products'])
+const props = defineProps(['products', 'eventName'])
 const emit = defineEmits(['sale-registered'])
 const { products } = toRefs(props)
-const eventName = inject('eventName', ref(localStorage.getItem('event_name') || ''))
+const { eventName } = toRefs(props)
 
 const currentItem = ref({ product: '', quantity: 1 })
 const cart = ref([])
@@ -129,20 +129,22 @@ function gerarTalao() {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   const lineHeight = 20
-  const margin = 10
+  const margin = 20
   const lines = []
   lines.push(eventName.value || 'Venda')
-  lines.push('----------------')
+  lines.push('-----------------------------')
   lastSale.value.items.forEach(it => {
     const total = getProductPrice(it.product, it.quantity)
     lines.push(`${it.product} x${it.quantity} = €${total}`)
   })
-  lines.push('----------------')
-  lines.push(`Total: €${lastSale.value.total.toFixed(2)}`)
-  lines.push(`Valor dado: €${lastSale.value.given.toFixed(2)}`)
-  lines.push(`Troco: €${lastSale.value.change}`)
+  lines.push('-----------------------------')
+  lines.push(`Total      : €${lastSale.value.total.toFixed(2)}`)
+  lines.push(`Valor dado : €${lastSale.value.given.toFixed(2)}`)
+  lines.push(`Troco      : €${lastSale.value.change}`)
+  lines.push('')
   lines.push(new Date(lastSale.value.date).toLocaleString())
-  lines.push('Este talão não tem valor legal')
+  lines.push('')
+  lines.push('Este talão não tem valor legal.')
   canvas.width = 280
   canvas.height = margin * 2 + lines.length * lineHeight
   ctx.fillStyle = '#fff'
