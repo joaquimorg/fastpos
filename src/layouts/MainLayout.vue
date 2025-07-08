@@ -7,18 +7,18 @@
       <v-spacer />
       <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer" />
       <v-row class="d-none d-md-flex" no-gutters align="center">
-        <v-btn to="/" text tag="router-link">Registar Venda</v-btn>
-        <v-btn to="/produtos" text tag="router-link">Produtos</v-btn>
-        <v-btn to="/resumo" text tag="router-link">Resumo do Dia</v-btn>
-        <v-btn to="/ajuda" text tag="router-link">Ajuda</v-btn>
+        <v-btn to="/" text tag="router-link" prepend-icon="mdi-cash-register">Registar Venda</v-btn>
+        <v-btn to="/produtos" text tag="router-link" prepend-icon="mdi-package-variant">Produtos</v-btn>
+        <v-btn to="/resumo" text tag="router-link" prepend-icon="mdi-chart-bar">Resumo do Dia</v-btn>
+        <v-btn to="/ajuda" text tag="router-link" prepend-icon="mdi-help-circle">Ajuda</v-btn>
       </v-row>
     </v-app-bar>
     <v-navigation-drawer v-model="drawer" app temporary class="d-md-none">
       <v-list>
-        <v-list-item to="/" tag="router-link">Registar Venda</v-list-item>
-        <v-list-item to="/produtos" tag="router-link">Produtos</v-list-item>
-        <v-list-item to="/resumo" tag="router-link">Resumo do Dia</v-list-item>
-        <v-list-item to="/ajuda" tag="router-link">Ajuda</v-list-item>
+        <v-list-item to="/" tag="router-link" prepend-icon="mdi-cash-register">Registar Venda</v-list-item>
+        <v-list-item to="/produtos" tag="router-link" prepend-icon="mdi-package-variant">Produtos</v-list-item>
+        <v-list-item to="/resumo" tag="router-link" prepend-icon="mdi-chart-bar">Resumo do Dia</v-list-item>
+        <v-list-item to="/ajuda" tag="router-link" prepend-icon="mdi-help-circle">Ajuda</v-list-item>
       </v-list>
     </v-navigation-drawer>
     <v-main>
