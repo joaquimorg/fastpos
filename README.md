@@ -10,6 +10,7 @@ Sistema de Registo de Vendas moderno, desenvolvido em Vue 3 com Vuetify 3, 100% 
 
 * Criar, editar e remover produtos
 * Definir o valor de venda de cada produto
+* Produtos com vendas registradas não podem ser editados ou removidos
 
 ### Registar Venda
 
