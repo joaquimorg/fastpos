@@ -166,8 +166,10 @@ function gerarTalao() {
     }
   })
 
-  const url = canvas.toDataURL('image/png')
-  window.open(url, '_blank')
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  }, 'image/png')
 }
 function novaVenda() {
   cart.value = []
