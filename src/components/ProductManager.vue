@@ -73,7 +73,10 @@ function saveProduct() {
 }
 function edit(idx) {
   const name = products.value[idx]?.name
-  if (productHasSales(name)) return
+  if (productHasSales(name)) {
+    alert('Não é possível editar um produto que já foi vendido.')
+    return
+  }
   editIdx.value = idx
   editProduct.value = { ...products.value[idx] }
 }
@@ -83,7 +86,10 @@ function cancelEdit() {
 }
 function remove(idx) {
   const name = products.value[idx]?.name
-  if (productHasSales(name)) return
+  if (productHasSales(name)) {
+    alert('Não é possível remover um produto que já foi vendido.')
+    return
+  }
   let updated = [...products.value]
   updated.splice(idx, 1)
   emit('update', updated)
