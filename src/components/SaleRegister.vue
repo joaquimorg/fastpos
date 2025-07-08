@@ -157,7 +157,7 @@ function gerarTalao() {
   lines.push({ left: 'Troco', right: `€${lastSale.value.change}` })
   lines.push({ text: '----------------', center: true })
   lines.push({ text: formatDatePT(lastSale.value.date), center: true })
-  lines.push({ text: 'Este talão não tem valor legal', center: true })
+  lines.push({ text: 'Este talão não tem valor legal.', center: true })
 
   canvas.width = width
   canvas.height = margin * 2 + lines.length * lineHeight
