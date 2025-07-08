@@ -81,6 +81,18 @@ const change = ref(null)
 const saleComplete = ref(false)
 const lastSale = ref({ items: [], total: 0, given: 0, change: 0 })
 
+function formatDatePT(dateStr) {
+  const d = new Date(dateStr)
+  return d.toLocaleString('pt-PT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 function getUnitPrice(name) {
   const p = products.value.find(x => x.name === name)
   return p ? p.price.toFixed(2) : '0.00'
@@ -143,7 +155,8 @@ function gerarTalao() {
   lines.push({ left: 'Total', right: `€${lastSale.value.total.toFixed(2)}` })
   lines.push({ left: 'Valor dado', right: `€${lastSale.value.given.toFixed(2)}` })
   lines.push({ left: 'Troco', right: `€${lastSale.value.change}` })
-  lines.push({ text: new Date(lastSale.value.date).toLocaleString(), center: true })
+  lines.push({ text: '----------------', center: true })
+  lines.push({ text: formatDatePT(lastSale.value.date), center: true })
   lines.push({ text: 'Este talão não tem valor legal', center: true })
 
   canvas.width = width
