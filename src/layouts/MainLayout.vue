@@ -25,15 +25,16 @@
   </v-app>
 </template>
 <script setup>
-import { ref, provide } from 'vue'
+import { ref, provide, watch } from 'vue'
 const logoSrc = '/fastpos-logo.png'
 const drawer = ref(false)
 // STATE PARTILHADO igual ao anterior...
-import { watch } from 'vue'
 const products = ref(JSON.parse(localStorage.getItem('sales_products')||'[]'))
 const sales = ref(JSON.parse(localStorage.getItem('sales_data')||'[]'))
 const saleSeq = ref(Number(localStorage.getItem('sales_seq')||1))
+const eventName = ref(localStorage.getItem('event_name') || '')
 function updateProducts(newList){ products.value = newList }
+function setEventName(name){ eventName.value = name }
 function registerSale(sale){
   sales.value.push({ ...sale, seq: saleSeq.value })
   saleSeq.value++
@@ -42,9 +43,12 @@ function closeDay(){ sales.value = [] }
 watch(products, v => localStorage.setItem('sales_products', JSON.stringify(v)), { deep:true })
 watch(sales, v => localStorage.setItem('sales_data', JSON.stringify(v)), { deep:true })
 watch(saleSeq, v => localStorage.setItem('sales_seq', v))
+watch(eventName, v => localStorage.setItem('event_name', v))
 provide('products', products)
 provide('sales', sales)
 provide('updateProducts', updateProducts)
 provide('registerSale', registerSale)
 provide('closeDay', closeDay)
+provide('eventName', eventName)
+provide('setEventName', setEventName)
 </script>
