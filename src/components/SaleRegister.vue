@@ -1,6 +1,11 @@
 <template>
   <v-card class="mx-auto my-2" max-width="480" elevation="5">
-    <v-card-title class="text-h6 text-center">{{ eventName.value || 'Registar Venda' }}</v-card-title>
+    <v-card-title class="text-h6 text-center">
+      <template v-if="eventName.value">
+        {{ eventName.value }}<br />
+      </template>
+      Registar Venda
+    </v-card-title>
     <v-card-text class="pa-2">
       <v-form @submit.prevent="addItem" v-if="!saleComplete">
         <v-row class="g-1" align="center">
