@@ -11,7 +11,7 @@
       </v-list>
       <v-divider class="my-2" v-if="stats.length"/>
       <div class="text-end mb-2"><strong>Total de Vendas:</strong> €{{ total.toFixed(2) }}</div>
-      <v-btn color="secondary" block class="mt-2" @click="gerarTalaoResumo">Gerar Talão</v-btn>
+      <v-btn color="secondary" block class="mt-2" @click="gerarTalaoResumo">Gerar Talão Resumo</v-btn>
       <v-btn color="red" block class="mt-2" @click="$emit('close-day')">Fechar Dia</v-btn>
     </v-card-text>
   </v-card>
@@ -71,7 +71,8 @@ function gerarTalaoResumo() {
   const width = 280
   const lines = []
 
-  lines.push({ text: eventName?.value || 'Resumo do Dia', center: true })
+  lines.push({ text: eventName?.value || 'Evento', center: true })
+  lines.push({ text: 'Resumo do Dia', center: true })
   lines.push({ text: '----------------', center: true })
   stats.value.forEach(st => {
     lines.push({ left: `${st.product} x${st.quantity}`, right: `€${st.total.toFixed(2)}` })
