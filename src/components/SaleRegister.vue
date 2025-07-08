@@ -72,7 +72,7 @@ import { ref, computed, toRefs, inject } from 'vue'
 const props = defineProps(['products'])
 const emit = defineEmits(['sale-registered'])
 const { products } = toRefs(props)
-const eventName = inject('eventName')
+const eventName = inject('eventName', ref(localStorage.getItem('event_name') || ''))
 
 const currentItem = ref({ product: '', quantity: 1 })
 const cart = ref([])
