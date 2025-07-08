@@ -6,7 +6,7 @@
       </v-toolbar-title>
       <v-spacer />
       <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer" />
-      <v-row class="d-none d-md-flex" no-gutters align="center">
+      <v-row class="d-none d-md-flex" no-gutters justify="end">
         <v-btn to="/" text tag="router-link" prepend-icon="mdi-cash-register">Registar Venda</v-btn>
         <v-btn to="/produtos" text tag="router-link" prepend-icon="mdi-package-variant">Produtos</v-btn>
         <v-btn to="/resumo" text tag="router-link" prepend-icon="mdi-chart-bar">Resumo do Dia</v-btn>
