@@ -1,6 +1,11 @@
 <template>
   <v-card class="mx-auto my-2" max-width="480" elevation="5">
-    <v-card-title class="text-h6 text-center">Registar Venda</v-card-title>
+    <v-card-title class="text-h6 text-center">
+      <template v-if="eventName.value">
+        {{ eventName.value }}<br />
+      </template>
+      Registar Venda
+    </v-card-title>
     <v-card-text class="pa-2">
       <v-form @submit.prevent="addItem" v-if="!saleComplete">
         <v-row class="g-1" align="center">
@@ -56,16 +61,18 @@
         <div class="text-end text-h6">Valor dado: <strong class="text-warning">€{{ lastSale.given.toFixed(2) }}</strong>
         </div>
         <div class="text-end text-h5">Troco: <strong class="text-error">€{{ lastSale.change }}</strong></div>
-        <v-btn color="primary" block class="mt-4" @click="novaVenda">Nova Venda</v-btn>
+        <v-btn color="secondary" block class="mt-4" @click="gerarTalao">Gerar Talão</v-btn>
+        <v-btn color="primary" block class="mt-2" @click="novaVenda">Nova Venda</v-btn>
       </div>
     </v-card-text>
   </v-card>
 </template>
 <script setup>
-import { ref, computed, toRefs } from 'vue'
+import { ref, computed, toRefs, inject } from 'vue'
 const props = defineProps(['products'])
 const emit = defineEmits(['sale-registered'])
 const { products } = toRefs(props)
+const eventName = inject('eventName', ref(localStorage.getItem('event_name') || ''))
 
 const currentItem = ref({ product: '', quantity: 1 })
 const cart = ref([])
@@ -116,6 +123,40 @@ function finalizeSale() {
   emit('sale-registered', reg)
   lastSale.value = reg
   saleComplete.value = true
+}
+function gerarTalao() {
+  if (!lastSale.value.items.length) return
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  const lineHeight = 20
+  const margin = 10
+  const lines = []
+  lines.push(eventName.value || 'Venda')
+  lines.push('----------------')
+  lastSale.value.items.forEach(it => {
+    const total = getProductPrice(it.product, it.quantity)
+    lines.push(`${it.product} x${it.quantity} = €${total}`)
+  })
+  lines.push('----------------')
+  lines.push(`Total: €${lastSale.value.total.toFixed(2)}`)
+  lines.push(`Valor dado: €${lastSale.value.given.toFixed(2)}`)
+  lines.push(`Troco: €${lastSale.value.change}`)
+  lines.push(new Date(lastSale.value.date).toLocaleString())
+  lines.push('Este talão não tem valor legal')
+  canvas.width = 280
+  canvas.height = margin * 2 + lines.length * lineHeight
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = '#000'
+  ctx.font = '16px sans-serif'
+  lines.forEach((line, idx) => {
+    ctx.fillText(line, margin, margin + idx * lineHeight)
+  })
+  const url = canvas.toDataURL('image/png')
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'talao.png'
+  link.click()
 }
 function novaVenda() {
   cart.value = []
