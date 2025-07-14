@@ -9,18 +9,23 @@
     <v-card-text class="pa-2">
       <div v-if="!saleComplete">
         <v-list density="compact" class="bg-transparent">
-          <v-list-item v-for="(p, idx) in products" :key="idx" class="py-1 px-0">
-            <v-list-item-title class="text-body-2">
-              {{ p.name }} — €{{ p.price.toFixed(2) }}
-            </v-list-item-title>
+          <v-list-item v-for="(p, idx) in products" :key="idx" class="py-2 px-0">
+            <template #prepend>
+              <div class="d-flex flex-column">
+                <span class="text-body-2 font-weight-medium">{{ p.name }}</span>
+                <span class="text-caption text-grey">€{{ p.price.toFixed(2) }}</span>
+              </div>
+            </template>
             <template #append>
-              <v-btn icon size="x-small" @click="decrement(p.name)" :disabled="getQty(p.name) === 0">
-                <v-icon size="x-small">mdi-minus</v-icon>
-              </v-btn>
-              <span class="mx-2">{{ getQty(p.name) }}</span>
-              <v-btn icon size="x-small" @click="increment(p.name)">
-                <v-icon size="x-small">mdi-plus</v-icon>
-              </v-btn>
+              <div class="d-flex align-center">
+                <v-btn icon size="x-small" @click="decrement(p.name)" :disabled="getQty(p.name) === 0">
+                  <v-icon size="x-small">mdi-minus</v-icon>
+                </v-btn>
+                <v-chip size="small" class="mx-1" color="primary" variant="elevated">{{ getQty(p.name) }}</v-chip>
+                <v-btn icon size="x-small" @click="increment(p.name)">
+                  <v-icon size="x-small">mdi-plus</v-icon>
+                </v-btn>
+              </div>
             </template>
           </v-list-item>
         </v-list>
