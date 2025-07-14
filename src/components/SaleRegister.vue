@@ -7,37 +7,26 @@
       Registar Venda
     </v-card-title>
     <v-card-text class="pa-2">
-      <v-form @submit.prevent="addItem" v-if="!saleComplete">
-        <v-row class="g-1" align="center">
-          <v-col cols="12">
-            <v-select :items="products" item-title="name" item-value="name" label="Produto"
-              v-model="currentItem.product" density="comfortable" hide-details required />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field v-model.number="currentItem.quantity" label="Quantidade" type="number" min="1"
-              density="comfortable" hide-details required inputmode="numeric" />
-          </v-col>
-          <v-col cols="12" v-if="currentPrice > 0">
-            <div class="text-body-2 text-end">Preço unitário: <strong>€{{ currentPrice.toFixed(2) }}</strong></div>
-          </v-col>
-        </v-row>
-        <v-btn type="submit" color="primary" block class="my-2">Adicionar à venda</v-btn>
-      </v-form>
-      <v-list v-if="cart.length && !saleComplete" density="compact" class="bg-transparent">
-        <v-list-item v-for="(item, idx) in cart" :key="idx" class="py-1 px-0">
-          <v-list-item-title class="text-body-2">
-            {{ item.product }} × {{ item.quantity }} @ €{{ getUnitPrice(item.product) }} = <strong>€{{
-              getProductPrice(item.product, item.quantity) }}</strong>
-          </v-list-item-title>
-          <template #append>
-            <v-btn icon @click="removeItem(idx)" size="x-small" color="red">
-              <v-icon size="x-small">mdi-delete</v-icon>
-            </v-btn>
-          </template>
-        </v-list-item>
-      </v-list>
-      <v-divider class="my-2" v-if="cart.length && !saleComplete" />
-      <div v-if="cart.length && !saleComplete">
+      <div v-if="!saleComplete">
+        <v-list density="compact" class="bg-transparent">
+          <v-list-item v-for="(p, idx) in products" :key="idx" class="py-1 px-0">
+            <v-list-item-title class="text-body-2">
+              {{ p.name }} — €{{ p.price.toFixed(2) }}
+            </v-list-item-title>
+            <template #append>
+              <v-btn icon size="x-small" @click="decrement(p.name)" :disabled="getQty(p.name) === 0">
+                <v-icon size="x-small">mdi-minus</v-icon>
+              </v-btn>
+              <span class="mx-2">{{ getQty(p.name) }}</span>
+              <v-btn icon size="x-small" @click="increment(p.name)">
+                <v-icon size="x-small">mdi-plus</v-icon>
+              </v-btn>
+            </template>
+          </v-list-item>
+        </v-list>
+      </div>
+      <v-divider class="my-2" v-if="selectedItems.length && !saleComplete" />
+      <div v-if="selectedItems.length && !saleComplete">
         <div class="text-end mb-4">Total: <strong>€{{ total }}</strong></div>
         <v-form @submit.prevent="finalizeSale">
           <v-text-field v-model.number="given" label="Valor dado pelo cliente (€) — opcional" type="number"
@@ -68,14 +57,13 @@
   </v-card>
 </template>
 <script setup>
-import { ref, computed, toRefs, inject } from 'vue'
+import { ref, computed, toRefs } from 'vue'
 const props = defineProps(['products', 'eventName'])
 const emit = defineEmits(['sale-registered'])
 const { products } = toRefs(props)
 const { eventName } = toRefs(props)
 
-const currentItem = ref({ product: '', quantity: 1 })
-const cart = ref([])
+const quantities = ref({})
 const given = ref(null)
 const change = ref(null)
 const saleComplete = ref(false)
@@ -97,36 +85,39 @@ function getUnitPrice(name) {
   const p = products.value.find(x => x.name === name)
   return p ? p.price.toFixed(2) : '0.00'
 }
-const currentPrice = computed(() => {
-  const p = products.value.find(x => x.name === currentItem.value.product)
-  return p ? p.price : 0
-})
-
+function getQty(name) {
+  return quantities.value[name] || 0
+}
+function increment(name) {
+  quantities.value[name] = getQty(name) + 1
+  saleComplete.value = false
+}
+function decrement(name) {
+  const q = getQty(name)
+  if (q > 0) {
+    quantities.value[name] = q - 1
+    saleComplete.value = false
+  }
+}
 function getProductPrice(name, quantity) {
   const p = products.value.find(x => x.name === name)
   return p ? (p.price * quantity).toFixed(2) : '0.00'
 }
-
-const total = computed(() => cart.value.reduce((acc, item) => {
+const selectedItems = computed(() => {
+  return products.value
+    .map(p => ({ product: p.name, quantity: getQty(p.name) }))
+    .filter(i => i.quantity > 0)
+})
+const total = computed(() => selectedItems.value.reduce((acc, item) => {
   const p = products.value.find(x => x.name === item.product)
   return acc + ((p?.price || 0) * item.quantity)
 }, 0).toFixed(2))
-
-function addItem() {
-  if (!currentItem.value.product || currentItem.value.quantity < 1) return
-  cart.value.push({ ...currentItem.value })
-  currentItem.value = { product: '', quantity: 1 }
-  saleComplete.value = false
-}
-function removeItem(idx) {
-  cart.value.splice(idx, 1)
-}
 function finalizeSale() {
-  if (!cart.value.length) return
+  if (!selectedItems.value.length) return
   let valorDado = (given.value == null || given.value === '') ? Number(total.value) : Number(given.value)
   change.value = (valorDado - total.value).toFixed(2)
   const reg = {
-    items: cart.value.map(i => ({ ...i })),
+    items: selectedItems.value.map(i => ({ ...i })),
     total: Number(total.value),
     given: valorDado,
     change: change.value,
@@ -185,7 +176,7 @@ function gerarTalao() {
   }, 'image/png')
 }
 function novaVenda() {
-  cart.value = []
+  quantities.value = {}
   given.value = null
   change.value = null
   saleComplete.value = false
