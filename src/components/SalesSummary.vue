@@ -20,6 +20,7 @@
       <v-divider class="my-2" v-if="salesStats.length || returnStats.length"/>
       <div class="text-end mb-2"><strong>Total de Vendas:</strong> €{{ totalSales.toFixed(2) }}</div>
       <div class="text-end mb-2" v-if="returnStats.length"><strong>Total Devoluções:</strong> €{{ totalReturns.toFixed(2) }}</div>
+      <div class="text-end mb-2" v-if="returnStats.length"><strong>Total Real:</strong> €{{ totalNet.toFixed(2) }}</div>
       <v-btn color="secondary" block class="mt-2" @click="gerarTalaoResumo">Gerar Talão Resumo</v-btn>
       <v-btn color="red" block class="mt-2" @click="$emit('close-day')">Fechar Dia</v-btn>
     </v-card-text>
@@ -64,6 +65,7 @@ const returnStats = computed(() => aggregatedStats.value.filter(st => st.quantit
 
 const totalSales = computed(() => salesStats.value.reduce((sum, st) => sum + st.total, 0))
 const totalReturns = computed(() => returnStats.value.reduce((sum, st) => sum + st.total, 0))
+const totalNet = computed(() => totalSales.value - totalReturns.value)
 
 const eventName = inject('eventName', null)
 
@@ -105,6 +107,7 @@ function gerarTalaoResumo() {
   lines.push({ left: 'Total Vendas', right: `€${totalSales.value.toFixed(2)}` })
   if (returnStats.value.length) {
     lines.push({ left: 'Total Devoluções', right: `€${totalReturns.value.toFixed(2)}` })
+    lines.push({ left: 'Total Real', right: `€${totalNet.value.toFixed(2)}` })
   }
   lines.push({ text: '----------------', center: true })
   lines.push({ text: formatDatePT(new Date().toISOString()), center: true })
