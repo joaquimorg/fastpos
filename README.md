@@ -14,7 +14,7 @@ Sistema de Registo de Vendas moderno, desenvolvido em Vue 3 com Vuetify 3, 100% 
 
 ### Registar Venda
 
-* Adicionar vários produtos à venda com quantidades
+* Adicionar vários produtos à venda com quantidades (incluindo negativas para trocas/devoluções)
 * Ver preço unitário e subtotal por item
 * Calcular total da venda
 * Introduzir valor dado pelo cliente e calcular troco

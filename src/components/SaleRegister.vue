@@ -9,7 +9,7 @@
     <v-card-text class="pa-2">
       <div v-if="!saleComplete">
         <v-list density="compact" class="bg-transparent">
-          <v-list-item v-for="(p, idx) in products" :key="idx" class="py-2 px-2 mb-1 bg-grey-lighten-3 rounded">
+          <v-list-item v-for="(p, idx) in products" :key="idx" class="py-2 px-2 mb-1 bg-grey-lighten-3 rounded" :class="getQty(p.name) < 0 ? 'bg-red-lighten-4' : ''">
             <template #prepend>
               <div class="d-flex flex-column">                
                 <span class="text-body-2 font-weight-medium">{{ p.name }}</span>
@@ -18,10 +18,10 @@
             </template>
             <template #append>
               <div class="d-flex align-center">
-                <v-btn icon size="small" @click="decrement(p.name)" :disabled="getQty(p.name) === 0">
+                <v-btn icon size="small" @click="decrement(p.name)">
                   <v-icon size="large">mdi-minus</v-icon>
                 </v-btn>
-                <v-chip size="large" class="mx-1" color="primary" variant="elevated">{{ getQty(p.name) }}</v-chip>
+                <v-chip size="large" class="mx-1" :color="getQty(p.name) < 0 ? 'red' : 'primary'" variant="elevated">{{ getQty(p.name) }}</v-chip>
                 <v-btn icon size="small" @click="increment(p.name)">
                   <v-icon size="large">mdi-plus</v-icon>
                 </v-btn>
@@ -44,17 +44,21 @@
         <h3 class="text-h6 mb-3 text-center text-primary">Resumo da Venda</h3>
         <v-list density="compact" class="bg-transparent">
           <v-list-item v-for="(item, idx) in lastSale.items" :key="idx">
-            <v-list-item-title class="text-body-2">
+            <v-list-item-title class="text-body-2" :class="item.quantity < 0 ? 'text-red' : ''">
               {{ item.product }} × {{ item.quantity }} @ €{{ getUnitPrice(item.product) }} = <strong>€{{ getProductPrice(item.product, item.quantity) }}</strong>
             </v-list-item-title>
           </v-list-item>
         </v-list>
         <v-divider class="my-3" />
-        <div class="text-end text-h6">Total: <strong class="text-success">€{{ lastSale.total.toFixed(2) }}</strong>
+        <div class="text-end text-h6">Total: <strong :class="lastSale.total < 0 ? 'text-red' : 'text-success'">€{{ lastSale.total.toFixed(2) }}</strong>
         </div>
         <div class="text-end text-h6">Valor dado: <strong class="text-warning">€{{ lastSale.given.toFixed(2) }}</strong>
         </div>
-        <div class="text-end text-h5">Troco: <strong class="text-error">€{{ lastSale.change }}</strong></div>
+        <div class="text-end text-h5">
+          <template v-if="lastSale.total < 0">Devolver:</template>
+          <template v-else>Troco:</template>
+          <strong class="text-error">€{{ lastSale.change }}</strong>
+        </div>
         <v-btn color="secondary" block class="mt-4" @click="gerarTalao">Gerar Talão</v-btn>
         <v-btn color="primary" block class="mt-2" @click="novaVenda">Nova Venda</v-btn>
       </div>
@@ -99,10 +103,8 @@ function increment(name) {
 }
 function decrement(name) {
   const q = getQty(name)
-  if (q > 0) {
-    quantities.value[name] = q - 1
-    saleComplete.value = false
-  }
+  quantities.value[name] = q - 1
+  saleComplete.value = false
 }
 function getProductPrice(name, quantity) {
   const p = products.value.find(x => x.name === name)
@@ -111,7 +113,7 @@ function getProductPrice(name, quantity) {
 const selectedItems = computed(() => {
   return products.value
     .map(p => ({ product: p.name, quantity: getQty(p.name) }))
-    .filter(i => i.quantity > 0)
+    .filter(i => i.quantity !== 0)
 })
 const total = computed(() => selectedItems.value.reduce((acc, item) => {
   const p = products.value.find(x => x.name === item.product)
@@ -119,7 +121,12 @@ const total = computed(() => selectedItems.value.reduce((acc, item) => {
 }, 0).toFixed(2))
 function finalizeSale() {
   if (!selectedItems.value.length) return
-  let valorDado = (given.value == null || given.value === '') ? Number(total.value) : Number(given.value)
+  let valorDado
+  if (given.value == null || given.value === '') {
+    valorDado = Number(total.value) > 0 ? Number(total.value) : 0
+  } else {
+    valorDado = Number(given.value)
+  }
   change.value = (valorDado - total.value).toFixed(2)
   const reg = {
     items: selectedItems.value.map(i => ({ ...i })),
@@ -150,7 +157,7 @@ function gerarTalao() {
   lines.push({ text: '----------------', center: true })
   lines.push({ left: 'Total', right: `€${lastSale.value.total.toFixed(2)}` })
   lines.push({ left: 'Valor dado', right: `€${lastSale.value.given.toFixed(2)}` })
-  lines.push({ left: 'Troco', right: `€${lastSale.value.change}` })
+  lines.push({ left: lastSale.value.total < 0 ? 'Devolver' : 'Troco', right: `€${lastSale.value.change}` })
   lines.push({ text: '----------------', center: true })
   lines.push({ text: formatDatePT(lastSale.value.date), center: true })
   lines.push({ text: 'Este talão não tem valor legal.', center: true })
