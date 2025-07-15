@@ -2,15 +2,24 @@
   <v-card class="mx-auto my-4" max-width="480" elevation="5">
     <v-card-title class="text-h6 text-center">Resumo do Dia</v-card-title>
     <v-card-text>
-      <v-list v-if="stats.length" density="compact" class="bg-transparent">
-        <v-list-item v-for="(stat, idx) in stats" :key="idx">
+      <v-list v-if="salesStats.length" density="compact" class="bg-transparent">
+        <v-list-item v-for="(stat, idx) in salesStats" :key="`s-${idx}`">
           <v-list-item-title>
             <strong>{{ stat.product }}</strong> — {{ stat.quantity }} vendidos — Total: €{{ stat.total.toFixed(2) }}
           </v-list-item-title>
         </v-list-item>
       </v-list>
-      <v-divider class="my-2" v-if="stats.length"/>
-      <div class="text-end mb-2"><strong>Total de Vendas:</strong> €{{ total.toFixed(2) }}</div>
+      <v-divider class="my-2" v-if="salesStats.length"/>
+      <v-list v-if="returnStats.length" density="compact" class="bg-transparent">
+        <v-list-item v-for="(stat, idx) in returnStats" :key="`r-${idx}`">
+          <v-list-item-title class="text-red">
+            <strong>{{ stat.product }}</strong> — {{ stat.quantity }} devolvidos — Total: €{{ stat.total.toFixed(2) }}
+          </v-list-item-title>
+        </v-list-item>
+      </v-list>
+      <v-divider class="my-2" v-if="salesStats.length || returnStats.length"/>
+      <div class="text-end mb-2"><strong>Total de Vendas:</strong> €{{ totalSales.toFixed(2) }}</div>
+      <div class="text-end mb-2" v-if="returnStats.length"><strong>Total Devoluções:</strong> €{{ totalReturns.toFixed(2) }}</div>
       <v-btn color="secondary" block class="mt-2" @click="gerarTalaoResumo">Gerar Talão Resumo</v-btn>
       <v-btn color="red" block class="mt-2" @click="$emit('close-day')">Fechar Dia</v-btn>
     </v-card-text>
@@ -29,7 +38,7 @@ const getProductPrice = (name) => {
   return match ? Number(match.price) : 0
 }
 
-const stats = computed(() => {
+const aggregatedStats = computed(() => {
   const obj = {}
   for (const sale of props.sales) {
     if (!Array.isArray(sale.items)) continue
@@ -46,7 +55,15 @@ const stats = computed(() => {
   return Object.values(obj)
 })
 
-const total = computed(() => stats.value.reduce((sum, product) => sum + product.total, 0))
+const salesStats = computed(() => aggregatedStats.value.filter(st => st.quantity > 0))
+const returnStats = computed(() => aggregatedStats.value.filter(st => st.quantity < 0).map(st => ({
+  product: st.product,
+  quantity: Math.abs(st.quantity),
+  total: Math.abs(st.total)
+})))
+
+const totalSales = computed(() => salesStats.value.reduce((sum, st) => sum + st.total, 0))
+const totalReturns = computed(() => returnStats.value.reduce((sum, st) => sum + st.total, 0))
 
 const eventName = inject('eventName', null)
 
@@ -63,7 +80,7 @@ function formatDatePT(dateStr) {
 }
 
 function gerarTalaoResumo() {
-  if (!stats.value.length) return
+  if (!aggregatedStats.value.length) return
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   const lineHeight = 20
@@ -74,11 +91,21 @@ function gerarTalaoResumo() {
   lines.push({ text: eventName?.value || 'Evento', center: true })
   lines.push({ text: 'Resumo do Dia', center: true })
   lines.push({ text: '----------------', center: true })
-  stats.value.forEach(st => {
+  salesStats.value.forEach(st => {
     lines.push({ left: `${st.product} x${st.quantity}`, right: `€${st.total.toFixed(2)}` })
   })
+  if (returnStats.value.length) {
+    lines.push({ text: '----------------', center: true })
+    lines.push({ text: 'Devoluções Anteriores', center: true })
+    returnStats.value.forEach(st => {
+      lines.push({ left: `${st.product} x${st.quantity}`, right: `€${st.total.toFixed(2)}` })
+    })
+  }
   lines.push({ text: '----------------', center: true })
-  lines.push({ left: 'Total Vendas', right: `€${total.value.toFixed(2)}` })
+  lines.push({ left: 'Total Vendas', right: `€${totalSales.value.toFixed(2)}` })
+  if (returnStats.value.length) {
+    lines.push({ left: 'Total Devoluções', right: `€${totalReturns.value.toFixed(2)}` })
+  }
   lines.push({ text: '----------------', center: true })
   lines.push({ text: formatDatePT(new Date().toISOString()), center: true })
   lines.push({ text: 'Este talão não tem valor legal.', center: true })
