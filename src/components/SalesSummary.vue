@@ -39,11 +39,12 @@ const getProductPrice = (name) => {
   return match ? Number(match.price) : 0
 }
 
-const aggregatedStats = computed(() => {
+const salesStats = computed(() => {
   const obj = {}
   for (const sale of props.sales) {
     if (!Array.isArray(sale.items)) continue
     for (const item of sale.items) {
+      if (item.quantity <= 0) continue
       const key = String(item.product).trim().toLowerCase()
       if (!obj[key]) {
         obj[key] = { product: item.product, quantity: 0, total: 0 }
@@ -56,12 +57,23 @@ const aggregatedStats = computed(() => {
   return Object.values(obj)
 })
 
-const salesStats = computed(() => aggregatedStats.value.filter(st => st.quantity > 0))
-const returnStats = computed(() => aggregatedStats.value.filter(st => st.quantity < 0).map(st => ({
-  product: st.product,
-  quantity: Math.abs(st.quantity),
-  total: Math.abs(st.total)
-})))
+const returnStats = computed(() => {
+  const obj = {}
+  for (const sale of props.sales) {
+    if (!Array.isArray(sale.items)) continue
+    for (const item of sale.items) {
+      if (item.quantity >= 0) continue
+      const key = String(item.product).trim().toLowerCase()
+      if (!obj[key]) {
+        obj[key] = { product: item.product, quantity: 0, total: 0 }
+      }
+      const unitPrice = getProductPrice(item.product)
+      obj[key].quantity += Math.abs(item.quantity)
+      obj[key].total += Math.abs(unitPrice * item.quantity)
+    }
+  }
+  return Object.values(obj)
+})
 
 const totalSales = computed(() => salesStats.value.reduce((sum, st) => sum + st.total, 0))
 const totalReturns = computed(() => returnStats.value.reduce((sum, st) => sum + st.total, 0))
@@ -82,7 +94,7 @@ function formatDatePT(dateStr) {
 }
 
 function gerarTalaoResumo() {
-  if (!aggregatedStats.value.length) return
+  if (!salesStats.value.length && !returnStats.value.length) return
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   const lineHeight = 20
