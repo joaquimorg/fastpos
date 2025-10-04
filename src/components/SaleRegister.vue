@@ -13,7 +13,16 @@
             <template #prepend>
               <div class="d-flex flex-column">                
                 <span class="text-body-2 font-weight-medium">{{ p.name }}</span>
-                <span class="text-caption text-blue-accent-4">€{{ p.price.toFixed(2) }}</span>
+                <span class="text-caption text-blue-accent-4">
+                  <span
+                    v-if="useScarf"
+                    class="currency-icon"
+                    role="img"
+                    aria-label="Lenço"
+                  ></span>
+                  <span v-else class="currency-text" aria-hidden="true">€</span>
+                  {{ p.price.toFixed(2) }}
+                </span>
               </div>
             </template>
             <template #append>
@@ -32,10 +41,39 @@
       </div>
       <v-divider class="my-2" v-if="selectedItems.length && !saleComplete" />
       <div v-if="selectedItems.length && !saleComplete">
-        <div class="text-end mb-4">Total: <strong>€{{ total }}</strong></div>
+        <div class="text-end mb-4">
+          Total:
+          <strong>
+            <span
+              v-if="useScarf"
+              class="currency-icon"
+              role="img"
+              aria-label="Lenço"
+            ></span>
+            <span v-else class="currency-text" aria-hidden="true">€</span>
+            {{ total }}
+          </strong>
+        </div>
         <v-form @submit.prevent="finalizeSale">
-          <v-text-field v-model.number="given" label="Valor dado pelo cliente (€) — opcional" type="number"
-            inputmode="decimal" density="comfortable" hide-details class="mb-4" />
+          <v-text-field
+            v-model.number="given"
+            label="Valor dado pelo cliente — opcional"
+            type="number"
+            inputmode="decimal"
+            density="comfortable"
+            hide-details
+            class="mb-4"
+          >
+            <template #prepend-inner>
+              <span
+                v-if="useScarf"
+                class="currency-icon currency-icon--input"
+                role="img"
+                aria-label="Lenço"
+              ></span>
+              <span v-else class="currency-text currency-text--input" aria-hidden="true">€</span>
+            </template>
+          </v-text-field>
           <v-btn type="submit" color="success" block class="mb-2">Finalizar Venda e Calcular Troco</v-btn>
         </v-form>
       </div>
@@ -45,19 +83,69 @@
         <v-list density="compact" class="bg-transparent">
           <v-list-item v-for="(item, idx) in lastSale.items" :key="idx">
             <v-list-item-title class="text-body-2" :class="item.quantity < 0 ? 'text-red' : ''">
-              {{ item.product }} × {{ item.quantity }} @ €{{ getUnitPrice(item.product) }} = <strong>€{{ getProductPrice(item.product, item.quantity) }}</strong>
+              {{ item.product }} × {{ item.quantity }} @
+              <span
+                v-if="useScarf"
+                class="currency-icon"
+                role="img"
+                aria-label="Lenço"
+              ></span>
+              <span v-else class="currency-text" aria-hidden="true">€</span>
+              {{ getUnitPrice(item.product) }}
+              =
+              <strong>
+                <span
+                  v-if="useScarf"
+                  class="currency-icon"
+                  role="img"
+                  aria-label="Lenço"
+                ></span>
+                <span v-else class="currency-text" aria-hidden="true">€</span>
+                {{ getProductPrice(item.product, item.quantity) }}
+              </strong>
             </v-list-item-title>
           </v-list-item>
         </v-list>
         <v-divider class="my-3" />
-        <div class="text-end text-h6">Total: <strong :class="lastSale.total < 0 ? 'text-red' : 'text-success'">€{{ lastSale.total.toFixed(2) }}</strong>
+        <div class="text-end text-h6">
+          Total:
+          <strong :class="lastSale.total < 0 ? 'text-red' : 'text-success'">
+            <span
+              v-if="useScarf"
+              class="currency-icon"
+              role="img"
+              aria-label="Lenço"
+            ></span>
+            <span v-else class="currency-text" aria-hidden="true">€</span>
+            {{ lastSale.total.toFixed(2) }}
+          </strong>
         </div>
-        <div class="text-end text-h6">Valor dado: <strong class="text-warning">€{{ lastSale.given.toFixed(2) }}</strong>
+        <div class="text-end text-h6">
+          Valor dado:
+          <strong class="text-warning">
+            <span
+              v-if="useScarf"
+              class="currency-icon"
+              role="img"
+              aria-label="Lenço"
+            ></span>
+            <span v-else class="currency-text" aria-hidden="true">€</span>
+            {{ lastSale.given.toFixed(2) }}
+          </strong>
         </div>
         <div class="text-end text-h5">
           <template v-if="lastSale.total < 0">Devolver:</template>
           <template v-else>Troco:</template>
-          <strong class="text-error">€{{ lastSale.change }}</strong>
+          <strong class="text-error">
+            <span
+              v-if="useScarf"
+              class="currency-icon"
+              role="img"
+              aria-label="Lenço"
+            ></span>
+            <span v-else class="currency-text" aria-hidden="true">€</span>
+            {{ lastSale.change }}
+          </strong>
         </div>
         <v-btn color="secondary" block class="mt-4" @click="gerarTalao">Gerar Talão</v-btn>
         <v-btn color="primary" block class="mt-2" @click="novaVenda">Nova Venda</v-btn>
@@ -66,12 +154,14 @@
   </v-card>
 </template>
 <script setup>
-import { ref, computed, toRefs } from 'vue'
+import { ref, computed, toRefs, inject } from 'vue'
 const props = defineProps(['products', 'eventName'])
 const emit = defineEmits(['sale-registered'])
 const { products } = toRefs(props)
 const { eventName } = toRefs(props)
 
+const currencyPreference = inject('currencyPreference', ref('scarf'))
+const useScarf = computed(() => (currencyPreference?.value || 'scarf') === 'scarf')
 const quantities = ref({})
 const given = ref(null)
 const change = ref(null)
@@ -146,46 +236,96 @@ function gerarTalao() {
   const lineHeight = 20
   const margin = 20
   const width = 280
+  const iconSrc = '/lenco.png'
+  const iconSize = 16
+  const iconSpacing = 6
+  const useIcon = useScarf.value
+
   const lines = []
 
-  lines.push({ text: eventName.value || 'Venda', center: true })
-  lines.push({ text: '----------------', center: true })
+  lines.push({ type: 'center', text: eventName.value || 'Venda' })
+  lines.push({ type: 'center', text: '----------------' })
   lastSale.value.items.forEach(it => {
     const total = getProductPrice(it.product, it.quantity)
-    lines.push({ left: `${it.product} x${it.quantity}`, right: `€${total}` })
+    lines.push({
+      type: 'row',
+      left: it.product + ' x' + it.quantity,
+      right: { text: total, icon: useIcon }
+    })
   })
-  lines.push({ text: '----------------', center: true })
-  lines.push({ left: 'Total', right: `€${lastSale.value.total.toFixed(2)}` })
-  lines.push({ left: 'Valor dado', right: `€${lastSale.value.given.toFixed(2)}` })
-  lines.push({ left: lastSale.value.total < 0 ? 'Devolver' : 'Troco', right: `€${lastSale.value.change}` })
-  lines.push({ text: '----------------', center: true })
-  lines.push({ text: formatDatePT(lastSale.value.date), center: true })
-  lines.push({ text: 'Este talão não tem valor legal.', center: true })
+  lines.push({ type: 'center', text: '----------------' })
+  lines.push({
+    type: 'row',
+    left: 'Total',
+    right: { text: lastSale.value.total.toFixed(2), icon: useIcon }
+  })
+  lines.push({
+    type: 'row',
+    left: 'Valor dado',
+    right: { text: lastSale.value.given.toFixed(2), icon: useIcon }
+  })
+  lines.push({
+    type: 'row',
+    left: lastSale.value.total < 0 ? 'Devolver' : 'Troco',
+    right: { text: lastSale.value.change, icon: useIcon }
+  })
+  lines.push({ type: 'center', text: '----------------' })
+  lines.push({ type: 'center', text: formatDatePT(lastSale.value.date) })
+  lines.push({ type: 'center', text: 'Este talão não tem valor legal.' })
 
   canvas.width = width
   canvas.height = margin * 2 + lines.length * lineHeight
-  ctx.fillStyle = '#fff'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = '#000'
-  ctx.font = '16px sans-serif'
 
-  lines.forEach((line, idx) => {
-    const y = margin + idx * lineHeight
-    if (line.center) {
-      ctx.textAlign = 'center'
-      ctx.fillText(line.text, width / 2, y)
-    } else {
-      ctx.textAlign = 'left'
-      ctx.fillText(line.left, margin, y)
-      ctx.textAlign = 'right'
-      ctx.fillText(line.right, width - margin, y)
-    }
-  })
+  const draw = icon => {
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#000'
+    ctx.font = '16px sans-serif'
+    ctx.textBaseline = 'middle'
 
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-  }, 'image/png')
+    lines.forEach((line, idx) => {
+      const y = margin + idx * lineHeight + lineHeight / 2
+      if (line.type === 'center') {
+        ctx.textAlign = 'center'
+        ctx.fillText(line.text, width / 2, y)
+      } else if (line.type === 'row') {
+        ctx.textAlign = 'left'
+        ctx.fillText(line.left, margin, y)
+
+        const rightX = width - margin
+        const rightText = typeof line.right === 'string' ? line.right : line.right.text
+        ctx.textAlign = 'right'
+        ctx.fillText(rightText, rightX, y)
+
+        const showIcon = typeof line.right === 'object' && line.right.icon && icon
+        if (showIcon) {
+          const textWidth = ctx.measureText(rightText).width
+          const iconX = rightX - textWidth - iconSpacing - iconSize
+          const iconY = y - iconSize / 2
+          ctx.drawImage(icon, iconX, iconY, iconSize, iconSize)
+        }
+      }
+    })
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    }, 'image/png')
+  }
+
+  if (!useIcon) {
+    draw(null)
+    return
+  }
+
+  const icon = new Image()
+  icon.src = iconSrc
+  if (icon.complete) {
+    draw(icon)
+  } else {
+    icon.onload = () => draw(icon)
+    icon.onerror = () => draw(null)
+  }
 }
 function novaVenda() {
   quantities.value = {}

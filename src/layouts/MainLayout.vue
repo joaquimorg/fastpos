@@ -35,8 +35,13 @@ const products = ref(JSON.parse(localStorage.getItem('sales_products')||'[]'))
 const sales = ref(JSON.parse(localStorage.getItem('sales_data')||'[]'))
 const saleSeq = ref(Number(localStorage.getItem('sales_seq')||1))
 const eventName = ref(localStorage.getItem('event_name') || '')
+const savedCurrencyPref = localStorage.getItem('currency_pref') === 'euro' ? 'euro' : 'scarf'
+const currencyPreference = ref(savedCurrencyPref)
 function updateProducts(newList){ products.value = newList }
 function setEventName(name){ eventName.value = name }
+function setCurrencyPreference(pref){
+  currencyPreference.value = pref === 'euro' ? 'euro' : 'scarf'
+}
 function registerSale(sale){
   sales.value.push({ ...sale, seq: saleSeq.value })
   saleSeq.value++
@@ -46,6 +51,7 @@ watch(products, v => localStorage.setItem('sales_products', JSON.stringify(v)), 
 watch(sales, v => localStorage.setItem('sales_data', JSON.stringify(v)), { deep:true })
 watch(saleSeq, v => localStorage.setItem('sales_seq', v))
 watch(eventName, v => localStorage.setItem('event_name', v))
+watch(currencyPreference, v => localStorage.setItem('currency_pref', v))
 provide('products', products)
 provide('sales', sales)
 provide('updateProducts', updateProducts)
@@ -53,4 +59,6 @@ provide('registerSale', registerSale)
 provide('closeDay', closeDay)
 provide('eventName', eventName)
 provide('setEventName', setEventName)
+provide('currencyPreference', currencyPreference)
+provide('setCurrencyPreference', setCurrencyPreference)
 </script>

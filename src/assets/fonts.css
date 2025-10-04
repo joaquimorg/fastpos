@@ -14,3 +14,42 @@ select,
 .v-application * {
   font-family: 'Inter', sans-serif !important;
 }
+
+.currency-icon {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  background-image: url('/lenco.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+.currency-icon--label {
+  margin-left: 0.25rem;
+  margin-right: 0;
+}
+
+.currency-icon--input {
+  margin: 0;
+  width: 1em;
+  height: 1em;
+}
+
+.currency-text {
+  display: inline-block;
+  margin-right: 0.25rem;
+  font-weight: 600;
+}
+
+.currency-text--label {
+  margin-left: 0.25rem;
+  margin-right: 0;
+}
+
+.currency-text--input {
+  margin: 0;
+  margin-right: 0.35rem;
+}

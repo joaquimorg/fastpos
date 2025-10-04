@@ -17,15 +17,24 @@
           <v-col cols="12">
             <v-text-field
               v-model.number="editProduct.price"
-              label="Preço (€)"
               type="number"
-              min="0"
               step="0.01"
               required
               hide-details
               density="comfortable"
               inputmode="decimal"
-            />
+            >
+              <template #label>
+                Valor
+                <span
+                  v-if="useScarf"
+                  class="currency-icon currency-icon--label"
+                  role="img"
+                  aria-label="Lenço"
+                ></span>
+                <span v-else class="currency-text currency-text--label" aria-hidden="true">€</span>
+              </template>
+            </v-text-field>
           </v-col>
         </v-row>
         <div class="text-center my-2">
@@ -36,7 +45,18 @@
       <v-list v-if="products.length" density="compact" class="bg-transparent">
         <v-list-item v-for="(p, idx) in products" :key="idx" class="py-1 px-0">
           <v-list-item-title class="text-body-2">
-            {{ p.name }} <span class="grey--text">— €{{ p.price.toFixed(2) }}</span>
+            {{ p.name }}
+            <span class="grey--text">
+              —
+              <span
+                v-if="useScarf"
+                class="currency-icon"
+                role="img"
+                aria-label="Lenço"
+              ></span>
+              <span v-else class="currency-text" aria-hidden="true">€</span>
+              {{ p.price.toFixed(2) }}
+            </span>
           </v-list-item-title>
           <template #append>
             <v-btn icon @click="edit(idx)" size="x-small" :disabled="productHasSales(p.name)">
@@ -52,15 +72,17 @@
   </v-card>
 </template>
 <script setup>
-import { ref, toRefs, inject } from 'vue'
+import { ref, toRefs, inject, computed } from 'vue'
 const props = defineProps(['products'])
 const emit = defineEmits(['update'])
 const { products } = toRefs(props)
 const sales = inject('sales', ref([]))
+const currencyPreference = inject('currencyPreference', ref('scarf'))
+const useScarf = computed(() => (currencyPreference?.value || 'scarf') === 'scarf')
 const editProduct = ref({ name: '', price: null })
 const editIdx = ref(null)
 function saveProduct() {
-  if (!editProduct.value.name || editProduct.value.price === null || editProduct.value.price < 0) return
+  if (!editProduct.value.name || editProduct.value.price === null) return
   if (editIdx.value === null) {
     emit('update', [...products.value, {...editProduct.value}])
   } else {
