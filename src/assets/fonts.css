@@ -43,7 +43,6 @@ h1, h2, h3, .page-title, .brand-copy, .metric-value { font-family: 'Outfit', san
 .v-btn:not(.v-btn--icon) { min-height: 46px; }
 .v-btn, .mobile-nav__item, .side-nav__item { touch-action: manipulation; }
 .v-field { border-radius: 14px !important; }
-.v-field--focused { box-shadow: 0 0 0 3px rgba(8, 126, 156, .14); }
 .v-input__details { padding-inline: 4px !important; }
 .currency-icon { display: inline-block; width: 1.1em; height: 1.1em; margin-right: .25rem; vertical-align: -.14em; background: url('/lenco.png') center / contain no-repeat; }
 .currency-icon--label { margin: 0 0 0 .3rem; }

@@ -6,8 +6,10 @@ export default createRouter({
   },
   routes: [
     { path: '/', component: () => import('../pages/SaleRegisterPage.vue') },
-    { path: '/produtos', component: () => import('../pages/ProductManagerPage.vue') },
     { path: '/resumo', component: () => import('../pages/SalesSummaryPage.vue') },
-    { path: '/ajuda', component: () => import('../pages/HelpPage.vue') }
+    { path: '/produtos', component: () => import('../pages/ProductManagerPage.vue') },
+    { path: '/ajuda', component: () => import('../pages/HelpPage.vue') },
+    { path: '/privacidade', component: () => import('../pages/PrivacyPage.vue') },
+    { path: '/termos', component: () => import('../pages/TermsPage.vue') }
   ]
 })

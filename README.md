@@ -24,7 +24,9 @@ Sistema de Registo de Vendas moderno, desenvolvido em Vue 3 com Vuetify 3, 100% 
 
 * Mostrar totais por produto vendido (quantidade e valor)
 * Mostrar total global de vendas do dia
-* Possibilidade de "Fechar o dia" (limpa as vendas, mantém produtos)
+* Fechar e arquivar o dia em segurança no dispositivo
+* Criar ou atualizar uma aba diária num relatório Google Sheets do próprio utilizador
+* Manter uma fila local quando não existe internet ou autorização Google
 
 ### Outros
 
@@ -42,10 +44,28 @@ Sistema de Registo de Vendas moderno, desenvolvido em Vue 3 com Vuetify 3, 100% 
 
 ```bash
 npm install
+copy .env.example .env.local
 npm run dev
 ```
 
 > A aplicação estará disponível em [http://localhost:8080](http://localhost:8080)
+
+## Google Sheets
+
+Para ativar os relatórios Google Sheets:
+
+1. Crie um projeto no Google Cloud e ative a **Google Sheets API**.
+2. Configure o ecrã de consentimento OAuth e publique a aplicação para utilizadores externos.
+3. Adicione apenas o âmbito `https://www.googleapis.com/auth/drive.file`.
+4. Crie um cliente OAuth do tipo **Aplicação Web**.
+5. Adicione as origens JavaScript autorizadas, por exemplo `http://localhost:8080` e `https://fastpos.joaquim.pt`.
+6. Coloque o ID público do cliente em `.env.local`:
+
+```env
+VITE_GOOGLE_CLIENT_ID=000000000000-example.apps.googleusercontent.com
+```
+
+Não é necessário nem deve ser configurado um *client secret* no frontend. O ID do relatório, o estado da sincronização e os dias pendentes ficam guardados apenas no dispositivo do utilizador.
 
 ## Deploy como PWA
 
@@ -56,6 +76,25 @@ npm run build
 ```
 
 2. Serve a pasta `dist/` com um servidor como Nginx ou Apache.
+
+### Apache e URLs diretos
+
+O build inclui um ficheiro `.htaccess` que encaminha rotas da aplicação, como `/privacidade`, `/termos` e `/resumo`, para o `index.html`. Ao publicar, confirme que os ficheiros ocultos são copiados para o servidor.
+
+O `VirtualHost`/diretório Apache tem de permitir esta configuração, por exemplo:
+
+```apache
+<Directory /caminho/para/fastpos/dist>
+    AllowOverride Indexes
+    Require all granted
+</Directory>
+```
+
+Se o servidor não permitir `.htaccess`, adicione diretamente ao `VirtualHost`:
+
+```apache
+FallbackResource /index.html
+```
 
 
 ## Temas e Estilo

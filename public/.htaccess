@@ -1,0 +1,5 @@
+# Vue Router utiliza URLs reais (por exemplo /privacidade e /termos).
+# Os ficheiros existentes continuam a ser servidos normalmente; as restantes
+# rotas são entregues à aplicação para o Vue decidir que página apresentar.
+DirectoryIndex index.html
+FallbackResource /index.html

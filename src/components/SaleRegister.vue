@@ -99,8 +99,11 @@ function getQty(name) { return quantities.value[name] || 0 }
 function increment(name) { quantities.value[name] = getQty(name) + 1 }
 function decrement(name) { quantities.value[name] = getQty(name) - 1 }
 function getProductPriceNumber(name, quantity) { return getUnitPriceNumber(name) * quantity }
-const selectedItems = computed(() => products.value.map(p => ({ product: p.name, quantity: getQty(p.name) })).filter(i => i.quantity !== 0))
-const total = computed(() => selectedItems.value.reduce((sum, item) => sum + getProductPriceNumber(item.product, item.quantity), 0).toFixed(2))
+const selectedItems = computed(() => products.value.map(p => {
+  const quantity = getQty(p.name); const unitPrice = Number(p.price || 0)
+  return { product: p.name, quantity, unitPrice, lineTotal: Number((unitPrice * quantity).toFixed(2)) }
+}).filter(i => i.quantity !== 0))
+const total = computed(() => selectedItems.value.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2))
 function clearSelection() { quantities.value = {}; given.value = null }
 function finalizeSale() {
   if (!selectedItems.value.length) return

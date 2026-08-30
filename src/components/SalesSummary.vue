@@ -14,7 +14,7 @@
           <div v-for="stat in salesStats" :key="`sale-${stat.product}`" class="summary-table__row" role="row"><strong role="cell">{{ stat.product }}</strong><span role="cell"><v-chip size="x-small" color="success" variant="tonal">Venda</v-chip></span><span role="cell" class="numeric" data-label="Quantidade">{{ stat.quantity }}</span><b role="cell" class="numeric" data-label="Total">{{ formatMoney(stat.total) }}</b></div>
           <div v-for="stat in returnStats" :key="`return-${stat.product}`" class="summary-table__row summary-table__row--return" role="row"><strong role="cell">{{ stat.product }}</strong><span role="cell"><v-chip size="x-small" color="error" variant="tonal">Devolução</v-chip></span><span role="cell" class="numeric" data-label="Quantidade">{{ stat.quantity }}</span><b role="cell" class="numeric text-error" data-label="Total">− {{ formatMoney(stat.total) }}</b></div>
         </div>
-        <div class="close-day"><div><strong>Terminou a operação?</strong><p>Gere o talão resumo antes de limpar as vendas de hoje.</p></div><v-btn color="error" variant="outlined" prepend-icon="mdi-calendar-remove-outline" @click="closeDialog = true">Fechar dia</v-btn></div>
+        <div class="close-day"><div><strong>Terminou a operação?</strong><p>O dia será arquivado no dispositivo{{ sheetsConnected ? ' e enviado para o Google Sheets' : '' }}.</p></div><v-btn color="primary" variant="flat" prepend-icon="mdi-calendar-check-outline" @click="closeDialog = true">Fechar dia</v-btn></div>
       </v-card-text>
     </v-card>
   </div>
@@ -22,23 +22,34 @@
   <v-card v-else class="surface-card" elevation="0"><div class="empty-state summary-empty"><span class="empty-state__icon"><v-icon icon="mdi-chart-box-outline" size="30" /></span><h2>O dia ainda está a começar</h2><p>As vendas e devoluções registadas vão aparecer aqui.</p><v-btn to="/" color="primary" prepend-icon="mdi-cash-register" class="mt-3">Registar primeira venda</v-btn></div></v-card>
 
   <v-dialog v-model="closeDialog" max-width="440">
-    <v-card rounded="xl"><v-card-text class="pa-6"><span class="danger-icon"><v-icon icon="mdi-calendar-remove-outline" /></span><h2 class="dialog-title">Fechar o dia?</h2><p class="dialog-copy">Todas as vendas e devoluções atuais serão apagadas. Os produtos serão mantidos.</p></v-card-text><v-card-actions class="pa-4 pt-0"><v-spacer /><v-btn variant="text" @click="closeDialog = false">Cancelar</v-btn><v-btn color="error" @click="confirmCloseDay">Fechar dia</v-btn></v-card-actions></v-card>
+    <v-card rounded="xl"><v-card-text class="pa-6"><span class="close-icon"><v-icon icon="mdi-calendar-check-outline" /></span><h2 class="dialog-title">Fechar o dia?</h2><p class="dialog-copy">As vendas ficam arquivadas em segurança. {{ sheetsConnected ? 'Será criada ou atualizada a aba de hoje no seu relatório.' : 'Pode ligar o Google Sheets mais tarde para as sincronizar.' }}</p></v-card-text><v-card-actions class="pa-4 pt-0"><v-spacer /><v-btn variant="text" :disabled="closing" @click="closeDialog = false">Cancelar</v-btn><v-btn color="primary" :loading="closing" @click="confirmCloseDay">Fechar dia</v-btn></v-card-actions></v-card>
   </v-dialog>
+
+  <v-snackbar v-model="showFeedback" :color="feedback.color" timeout="6000" location="top"><v-icon :icon="feedback.icon" class="mr-2" />{{ feedback.message }}<template #actions><v-btn variant="text" @click="showFeedback = false">Fechar</v-btn></template></v-snackbar>
 </template>
 
 <script setup>
 import { computed, inject, ref } from 'vue'
 const props = defineProps({ sales: { type: Array, required: true }, products: { type: Array, default: () => [] } })
-const emit = defineEmits(['close-day'])
-const closeDialog = ref(false); const currencyPreference = inject('currencyPreference', ref('scarf')); const eventName = inject('eventName', ref(''))
+const closeDay = inject('closeDay'); const googleSheetsSettings = inject('googleSheetsSettings', ref({}))
+const closeDialog = ref(false); const closing = ref(false); const showFeedback = ref(false); const feedback = ref({ color: 'success', icon: 'mdi-check-circle-outline', message: '' }); const currencyPreference = inject('currencyPreference', ref('scarf')); const eventName = inject('eventName', ref(''))
 const useScarf = computed(() => (currencyPreference?.value || 'scarf') === 'scarf')
+const sheetsConnected = computed(() => Boolean(googleSheetsSettings.value?.spreadsheetId))
 const getProductPrice = name => Number(props.products.find(p => String(p.name).trim().toLowerCase() === String(name).trim().toLowerCase())?.price || 0)
-function aggregate(returns = false) { const result = {}; for (const sale of props.sales) { if (!Array.isArray(sale.items)) continue; for (const item of sale.items) { if (returns ? item.quantity >= 0 : item.quantity <= 0) continue; const key = String(item.product).trim().toLowerCase(); if (!result[key]) result[key] = { product: item.product, quantity: 0, total: 0 }; const qty = Math.abs(item.quantity); result[key].quantity += qty; result[key].total += getProductPrice(item.product) * qty } } return Object.values(result) }
+function aggregate(returns = false) { const result = {}; for (const sale of props.sales) { if (!Array.isArray(sale.items)) continue; for (const item of sale.items) { if (returns ? item.quantity >= 0 : item.quantity <= 0) continue; const key = String(item.product).trim().toLowerCase(); if (!result[key]) result[key] = { product: item.product, quantity: 0, total: 0 }; const qty = Math.abs(item.quantity); const unitPrice = Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice) : getProductPrice(item.product); result[key].quantity += qty; result[key].total += unitPrice * qty } } return Object.values(result) }
 const salesStats = computed(() => aggregate(false)); const returnStats = computed(() => aggregate(true))
 const totalSales = computed(() => salesStats.value.reduce((sum, stat) => sum + stat.total, 0)); const totalReturns = computed(() => returnStats.value.reduce((sum, stat) => sum + stat.total, 0)); const totalNet = computed(() => totalSales.value - totalReturns.value)
 function formatMoney(value) { return useScarf.value ? `${Number(value).toFixed(2)} lenços` : `€ ${Number(value).toFixed(2)}` }
 function formatDatePT(dateStr) { return new Date(dateStr).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) }
-function confirmCloseDay() { closeDialog.value = false; emit('close-day') }
+async function confirmCloseDay() {
+  closing.value = true
+  const result = await closeDay()
+  closing.value = false; closeDialog.value = false
+  if (result.synced) feedback.value = { color: 'success', icon: 'mdi-cloud-check-outline', message: 'Dia fechado e relatório atualizado no Google Sheets.' }
+  else if (result.reason === 'not-connected') feedback.value = { color: 'info', icon: 'mdi-content-save-check-outline', message: 'Dia fechado e guardado no dispositivo. Pode ligar o Google Sheets nas definições.' }
+  else feedback.value = { color: 'warning', icon: 'mdi-cloud-alert-outline', message: 'Dia guardado no dispositivo. A sincronização pode ser repetida nas definições.' }
+  showFeedback.value = true
+}
 function gerarTalaoResumo() {
   if (!salesStats.value.length && !returnStats.value.length) return
   const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); const lineHeight = 20; const margin = 20; const width = 280; const useIcon = useScarf.value
@@ -83,6 +94,7 @@ function gerarTalaoResumo() {
 .summary-empty h2 { margin: 0 0 6px; color: var(--pos-navy); font: 700 1.3rem 'Outfit', sans-serif; }
 .summary-empty p { margin: 0; }
 .danger-icon { display: grid; place-items: center; width: 48px; height: 48px; color: var(--pos-danger); background: #fbeaec; border-radius: 14px; }
+.close-icon { display: grid; place-items: center; width: 48px; height: 48px; color: #176b34; background: #e9f6ed; border-radius: 14px; }
 .dialog-title { margin: 16px 0 6px; color: var(--pos-navy); font: 700 1.35rem 'Outfit', sans-serif; }
 .dialog-copy { margin: 0; color: var(--pos-muted); line-height: 1.5; }
 @media (max-width: 767px) {

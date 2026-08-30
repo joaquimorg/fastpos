@@ -23,12 +23,14 @@
         </v-card-text>
       </v-card>
       <ProductManager :products="products" @update="updateProducts" />
+      <GoogleSheetsSettings />
     </div>
   </div>
 </template>
 <script setup>
 import { inject, computed } from 'vue'
 import ProductManager from '../components/ProductManager.vue'
+import GoogleSheetsSettings from '../components/GoogleSheetsSettings.vue'
 const products = inject('products'); const updateProducts = inject('updateProducts'); const eventName = inject('eventName'); const setEventName = inject('setEventName'); const currencyPreference = inject('currencyPreference'); const setCurrencyPreference = inject('setCurrencyPreference')
 const eventNameModel = computed({ get: () => eventName.value, set: val => setEventName(val || '') })
 const currencyPreferenceModel = computed({ get: () => currencyPreference.value, set: val => setCurrencyPreference(val) })
