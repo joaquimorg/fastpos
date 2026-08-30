@@ -60,6 +60,6 @@ npm run build
 
 ## Temas e Estilo
 
-* Tema personalizado moderno com cores vibrantes e tipografia Inter
+* Tema personalizado moderno com tipografia Outfit e Work Sans
 
 > Este projeto é open-source. Sinta-se à vontade para modificar e adaptar às suas necessidades.

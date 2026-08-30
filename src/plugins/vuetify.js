@@ -1,14 +1,10 @@
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import { md3 } from 'vuetify/blueprints'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
 export default createVuetify({
-  components,
-  directives,
   blueprint: md3,
   icons: {
     defaultSet: 'mdi',
@@ -21,14 +17,15 @@ export default createVuetify({
       modernFastPOS: {
         dark: false,
         colors: {
-          primary: '#7ecdf5',
-          secondary: '#FFC107',
-          background: '#C5C5C5',
+          primary: '#087E9C',
+          secondary: '#112D38',
+          accent: '#D9EF56',
+          background: '#F4F6F3',
           surface: '#FFFFFF',
-          error: '#B00020',
-          success: '#4CAF50',
-          info: '#2196F3',
-          warning: '#FB8C00'
+          error: '#BD3B43',
+          success: '#207A55',
+          info: '#087E9C',
+          warning: '#A66405'
         },
       },
     },

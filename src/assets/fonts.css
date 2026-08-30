@@ -1,55 +1,73 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
+  color: #172126;
+  background: #f4f6f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --pos-navy: #112d38;
+  --pos-primary: #087e9c;
+  --pos-primary-dark: #06647d;
+  --pos-accent: #d9ef56;
+  --pos-bg: #f4f6f3;
+  --pos-surface: #ffffff;
+  --pos-line: #dfe6e2;
+  --pos-muted: #65747a;
+  --pos-danger: #bd3b43;
+  --pos-radius: 20px;
+  --pos-shadow: 0 12px 40px rgba(24, 51, 59, 0.08);
 }
 
-body,
-html,
-button,
-input,
-textarea,
-select,
-.v-application,
-.v-application * {
-  font-family: 'Inter', sans-serif !important;
-}
-
-.currency-icon {
-  display: inline-block;
-  width: 1.1em;
-  height: 1.1em;
-  background-image: url('/lenco.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  vertical-align: middle;
-  margin-right: 0.25rem;
-}
-
-.currency-icon--label {
-  margin-left: 0.25rem;
-  margin-right: 0;
-}
-
-.currency-icon--input {
+* { box-sizing: border-box; }
+html { background: var(--pos-bg); }
+body {
   margin: 0;
-  width: 1em;
-  height: 1em;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: radial-gradient(circle at 100% 0%, rgba(8, 126, 156, 0.09), transparent 30rem), var(--pos-bg);
 }
-
-.currency-text {
-  display: inline-block;
-  margin-right: 0.25rem;
-  font-weight: 600;
+body, button, input, textarea, select, .v-application, .v-application * { font-family: 'Work Sans', sans-serif !important; }
+h1, h2, h3, .page-title, .brand-copy, .metric-value { font-family: 'Outfit', sans-serif !important; }
+.v-application { background: transparent !important; }
+.app-page { width: min(100%, 1120px); margin-inline: auto; padding: 32px; }
+.page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.page-eyebrow { margin: 0 0 4px; color: var(--pos-primary); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.page-title { margin: 0; color: var(--pos-navy); font-size: clamp(1.75rem, 3vw, 2.35rem); font-weight: 700; line-height: 1.1; letter-spacing: -.03em; }
+.page-subtitle { max-width: 600px; margin: 8px 0 0; color: var(--pos-muted); line-height: 1.55; }
+.surface-card { border: 1px solid rgba(31, 66, 76, .1) !important; border-radius: var(--pos-radius) !important; box-shadow: var(--pos-shadow) !important; overflow: hidden; }
+.section-title { color: var(--pos-navy); font-size: 1rem; font-weight: 700; }
+.empty-state { display: grid; justify-items: center; padding: 48px 24px; color: var(--pos-muted); text-align: center; }
+.empty-state__icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 16px; border-radius: 18px; color: var(--pos-primary); background: #e8f5f7; }
+.v-btn { letter-spacing: 0 !important; text-transform: none !important; font-weight: 700 !important; }
+.v-btn:not(.v-btn--icon) { min-height: 46px; }
+.v-btn, .mobile-nav__item, .side-nav__item { touch-action: manipulation; }
+.v-field { border-radius: 14px !important; }
+.v-field--focused { box-shadow: 0 0 0 3px rgba(8, 126, 156, .14); }
+.v-input__details { padding-inline: 4px !important; }
+.currency-icon { display: inline-block; width: 1.1em; height: 1.1em; margin-right: .25rem; vertical-align: -.14em; background: url('/lenco.png') center / contain no-repeat; }
+.currency-icon--label { margin: 0 0 0 .3rem; }
+.currency-icon--input { width: 1em; height: 1em; margin: 0; }
+.currency-text { display: inline-block; margin-right: .25rem; font-weight: 700; }
+.currency-text--label { margin: 0 0 0 .3rem; }
+.currency-text--input { margin: 0 .35rem 0 0; }
+.numeric { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid rgba(8, 126, 156, .5) !important; outline-offset: 3px; }
+@media (max-width: 767px) {
+  .app-page { padding: 20px 14px calc(78px + env(safe-area-inset-bottom)); }
+  .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+  .page-title { font-size: 1.75rem; }
+  .page-subtitle { font-size: .9375rem; }
+  .surface-card { border-radius: 18px !important; }
 }
-
-.currency-text--label {
-  margin-left: 0.25rem;
-  margin-right: 0;
+@media (max-width: 380px) {
+  .app-page { padding-inline: 10px; }
+  .page-subtitle { font-size: .875rem; }
 }
-
-.currency-text--input {
-  margin: 0;
-  margin-right: 0.35rem;
+@media (prefers-reduced-motion: no-preference) {
+  .surface-card { animation: card-in 280ms ease-out both; }
+  @keyframes card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

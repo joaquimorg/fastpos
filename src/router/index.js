@@ -1,15 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import SaleRegisterPage from '../pages/SaleRegisterPage.vue'
-import ProductManagerPage from '../pages/ProductManagerPage.vue'
-import SalesSummaryPage from '../pages/SalesSummaryPage.vue'
-import HelpPage from '../pages/HelpPage.vue'
-
 export default createRouter({
   history: createWebHistory(),
+  scrollBehavior() {
+    return { top: 0 }
+  },
   routes: [
-    { path: '/', component: SaleRegisterPage },
-    { path: '/produtos', component: ProductManagerPage },
-    { path: '/resumo', component: SalesSummaryPage },
-    { path: '/ajuda', component: HelpPage }
+    { path: '/', component: () => import('../pages/SaleRegisterPage.vue') },
+    { path: '/produtos', component: () => import('../pages/ProductManagerPage.vue') },
+    { path: '/resumo', component: () => import('../pages/SalesSummaryPage.vue') },
+    { path: '/ajuda', component: () => import('../pages/HelpPage.vue') }
   ]
 })

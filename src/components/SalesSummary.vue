@@ -1,258 +1,107 @@
 <template>
-  <v-card class="mx-auto my-4" max-width="480" elevation="5">
-    <v-card-title class="text-h6 text-center">Resumo do Dia</v-card-title>
-    <v-card-text>
-      <v-list v-if="salesStats.length" density="compact" class="bg-transparent">
-        <v-list-item v-for="(stat, idx) in salesStats" :key="`s-${idx}`">
-          <v-list-item-title>
-            <strong>{{ stat.product }}</strong>
-            — {{ stat.quantity }} vendidos — Total:
-            <span
-              v-if="useScarf"
-              class="currency-icon"
-              role="img"
-              aria-label="Lenço"
-            ></span>
-            <span v-else class="currency-text" aria-hidden="true">€</span>
-            {{ stat.total.toFixed(2) }}
-          </v-list-item-title>
-        </v-list-item>
-      </v-list>
-      <v-divider class="my-2" v-if="salesStats.length"/>
-      <v-list v-if="returnStats.length" density="compact" class="bg-transparent">
-        <v-list-item v-for="(stat, idx) in returnStats" :key="`r-${idx}`">
-          <v-list-item-title class="text-red">
-            <strong>{{ stat.product }}</strong>
-            — {{ stat.quantity }} devolvidos — Total:
-            <span
-              v-if="useScarf"
-              class="currency-icon"
-              role="img"
-              aria-label="Lenço"
-            ></span>
-            <span v-else class="currency-text" aria-hidden="true">€</span>
-            {{ stat.total.toFixed(2) }}
-          </v-list-item-title>
-        </v-list-item>
-      </v-list>
-      <v-divider class="my-2" v-if="salesStats.length || returnStats.length"/>
-      <div class="text-end mb-2">
-        <strong>Total de Vendas:</strong>
-        <span
-          v-if="useScarf"
-          class="currency-icon"
-          role="img"
-          aria-label="Lenço"
-        ></span>
-        <span v-else class="currency-text" aria-hidden="true">€</span>
-        {{ totalSales.toFixed(2) }}
-      </div>
-      <div class="text-end mb-2" v-if="returnStats.length">
-        <strong>Total Devoluções:</strong>
-        <span
-          v-if="useScarf"
-          class="currency-icon"
-          role="img"
-          aria-label="Lenço"
-        ></span>
-        <span v-else class="currency-text" aria-hidden="true">€</span>
-        {{ totalReturns.toFixed(2) }}
-      </div>
-      <div class="text-end mb-2" v-if="returnStats.length">
-        <strong>Total Real:</strong>
-        <span
-          v-if="useScarf"
-          class="currency-icon"
-          role="img"
-          aria-label="Lenço"
-        ></span>
-        <span v-else class="currency-text" aria-hidden="true">€</span>
-        {{ totalNet.toFixed(2) }}
-      </div>
-      <v-btn color="secondary" block class="mt-2" @click="gerarTalaoResumo">Gerar Talão Resumo</v-btn>
-      <v-btn color="red" block class="mt-2" @click="$emit('close-day')">Fechar Dia</v-btn>
-    </v-card-text>
-  </v-card>
+  <div v-if="sales.length" class="summary-content">
+    <section class="metrics-grid" aria-label="Totais do dia">
+      <v-card class="surface-card metric-card" elevation="0"><v-card-text><span class="metric-icon metric-icon--sales"><v-icon icon="mdi-trending-up" /></span><p>Vendas</p><strong class="metric-value numeric">{{ formatMoney(totalSales) }}</strong></v-card-text></v-card>
+      <v-card class="surface-card metric-card" elevation="0"><v-card-text><span class="metric-icon metric-icon--returns"><v-icon icon="mdi-arrow-u-left-top" /></span><p>Devoluções</p><strong class="metric-value numeric">{{ formatMoney(totalReturns) }}</strong></v-card-text></v-card>
+      <v-card class="surface-card metric-card metric-card--net" elevation="0"><v-card-text><span class="metric-icon"><v-icon icon="mdi-wallet-outline" /></span><p>Total líquido</p><strong class="metric-value numeric">{{ formatMoney(totalNet) }}</strong></v-card-text></v-card>
+    </section>
+
+    <v-card class="surface-card breakdown-card" elevation="0">
+      <v-card-text class="pa-5 pa-md-6">
+        <div class="summary-header"><div><h2>Movimento por produto</h2><p>{{ sales.length }} {{ sales.length === 1 ? 'operação registada' : 'operações registadas' }}</p></div><v-btn color="secondary" variant="tonal" prepend-icon="mdi-receipt-text-outline" @click="gerarTalaoResumo">Gerar talão resumo</v-btn></div>
+        <div class="summary-table" role="table" aria-label="Resumo por produto">
+          <div class="summary-table__head" role="row"><span role="columnheader">Produto</span><span role="columnheader">Tipo</span><span role="columnheader">Qtd.</span><span role="columnheader">Total</span></div>
+          <div v-for="stat in salesStats" :key="`sale-${stat.product}`" class="summary-table__row" role="row"><strong role="cell">{{ stat.product }}</strong><span role="cell"><v-chip size="x-small" color="success" variant="tonal">Venda</v-chip></span><span role="cell" class="numeric" data-label="Quantidade">{{ stat.quantity }}</span><b role="cell" class="numeric" data-label="Total">{{ formatMoney(stat.total) }}</b></div>
+          <div v-for="stat in returnStats" :key="`return-${stat.product}`" class="summary-table__row summary-table__row--return" role="row"><strong role="cell">{{ stat.product }}</strong><span role="cell"><v-chip size="x-small" color="error" variant="tonal">Devolução</v-chip></span><span role="cell" class="numeric" data-label="Quantidade">{{ stat.quantity }}</span><b role="cell" class="numeric text-error" data-label="Total">− {{ formatMoney(stat.total) }}</b></div>
+        </div>
+        <div class="close-day"><div><strong>Terminou a operação?</strong><p>Gere o talão resumo antes de limpar as vendas de hoje.</p></div><v-btn color="error" variant="outlined" prepend-icon="mdi-calendar-remove-outline" @click="closeDialog = true">Fechar dia</v-btn></div>
+      </v-card-text>
+    </v-card>
+  </div>
+
+  <v-card v-else class="surface-card" elevation="0"><div class="empty-state summary-empty"><span class="empty-state__icon"><v-icon icon="mdi-chart-box-outline" size="30" /></span><h2>O dia ainda está a começar</h2><p>As vendas e devoluções registadas vão aparecer aqui.</p><v-btn to="/" color="primary" prepend-icon="mdi-cash-register" class="mt-3">Registar primeira venda</v-btn></div></v-card>
+
+  <v-dialog v-model="closeDialog" max-width="440">
+    <v-card rounded="xl"><v-card-text class="pa-6"><span class="danger-icon"><v-icon icon="mdi-calendar-remove-outline" /></span><h2 class="dialog-title">Fechar o dia?</h2><p class="dialog-copy">Todas as vendas e devoluções atuais serão apagadas. Os produtos serão mantidos.</p></v-card-text><v-card-actions class="pa-4 pt-0"><v-spacer /><v-btn variant="text" @click="closeDialog = false">Cancelar</v-btn><v-btn color="error" @click="confirmCloseDay">Fechar dia</v-btn></v-card-actions></v-card>
+  </v-dialog>
 </template>
 
 <script setup>
 import { computed, inject, ref } from 'vue'
-const props = defineProps({
-  sales: { type: Array, required: true },
-  products: { type: Array, default: () => [] }
-})
-
-const currencyPreference = inject('currencyPreference', ref('scarf'))
+const props = defineProps({ sales: { type: Array, required: true }, products: { type: Array, default: () => [] } })
+const emit = defineEmits(['close-day'])
+const closeDialog = ref(false); const currencyPreference = inject('currencyPreference', ref('scarf')); const eventName = inject('eventName', ref(''))
 const useScarf = computed(() => (currencyPreference?.value || 'scarf') === 'scarf')
-
-const getProductPrice = (name) => {
-  const match = props.products.find(p => String(p.name).trim().toLowerCase() === String(name).trim().toLowerCase())
-  return match ? Number(match.price) : 0
-}
-
-const salesStats = computed(() => {
-  const obj = {}
-  for (const sale of props.sales) {
-    if (!Array.isArray(sale.items)) continue
-    for (const item of sale.items) {
-      if (item.quantity <= 0) continue
-      const key = String(item.product).trim().toLowerCase()
-      if (!obj[key]) {
-        obj[key] = { product: item.product, quantity: 0, total: 0 }
-      }
-      const unitPrice = getProductPrice(item.product)
-      obj[key].quantity += item.quantity
-      obj[key].total += unitPrice * item.quantity
-    }
-  }
-  return Object.values(obj)
-})
-
-const returnStats = computed(() => {
-  const obj = {}
-  for (const sale of props.sales) {
-    if (!Array.isArray(sale.items)) continue
-    for (const item of sale.items) {
-      if (item.quantity >= 0) continue
-      const key = String(item.product).trim().toLowerCase()
-      if (!obj[key]) {
-        obj[key] = { product: item.product, quantity: 0, total: 0 }
-      }
-      const unitPrice = getProductPrice(item.product)
-      obj[key].quantity += Math.abs(item.quantity)
-      obj[key].total += Math.abs(unitPrice * item.quantity)
-    }
-  }
-  return Object.values(obj)
-})
-
-const totalSales = computed(() => salesStats.value.reduce((sum, st) => sum + st.total, 0))
-const totalReturns = computed(() => returnStats.value.reduce((sum, st) => sum + st.total, 0))
-const totalNet = computed(() => totalSales.value - totalReturns.value)
-
-const eventName = inject('eventName', null)
-
-function formatDatePT(dateStr) {
-  const d = new Date(dateStr)
-  return d.toLocaleString('pt-PT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
+const getProductPrice = name => Number(props.products.find(p => String(p.name).trim().toLowerCase() === String(name).trim().toLowerCase())?.price || 0)
+function aggregate(returns = false) { const result = {}; for (const sale of props.sales) { if (!Array.isArray(sale.items)) continue; for (const item of sale.items) { if (returns ? item.quantity >= 0 : item.quantity <= 0) continue; const key = String(item.product).trim().toLowerCase(); if (!result[key]) result[key] = { product: item.product, quantity: 0, total: 0 }; const qty = Math.abs(item.quantity); result[key].quantity += qty; result[key].total += getProductPrice(item.product) * qty } } return Object.values(result) }
+const salesStats = computed(() => aggregate(false)); const returnStats = computed(() => aggregate(true))
+const totalSales = computed(() => salesStats.value.reduce((sum, stat) => sum + stat.total, 0)); const totalReturns = computed(() => returnStats.value.reduce((sum, stat) => sum + stat.total, 0)); const totalNet = computed(() => totalSales.value - totalReturns.value)
+function formatMoney(value) { return useScarf.value ? `${Number(value).toFixed(2)} lenços` : `€ ${Number(value).toFixed(2)}` }
+function formatDatePT(dateStr) { return new Date(dateStr).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) }
+function confirmCloseDay() { closeDialog.value = false; emit('close-day') }
 function gerarTalaoResumo() {
   if (!salesStats.value.length && !returnStats.value.length) return
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  const lineHeight = 20
-  const margin = 20
-  const width = 280
-  const iconSrc = '/lenco.png'
-  const iconSize = 16
-  const iconSpacing = 6
-  const useIcon = useScarf.value
-
-  const lines = []
-
-  lines.push({ type: 'center', text: eventName?.value || 'Evento' })
-  lines.push({ type: 'center', text: 'Resumo do Dia' })
-  lines.push({ type: 'center', text: '----------------' })
-  salesStats.value.forEach(st => {
-    lines.push({
-      type: 'row',
-      left: st.product + ' x' + st.quantity,
-      right: { text: st.total.toFixed(2), icon: useIcon }
-    })
-  })
-  if (returnStats.value.length) {
-    lines.push({ type: 'center', text: '----------------' })
-    lines.push({ type: 'center', text: 'Devoluções Anteriores' })
-    returnStats.value.forEach(st => {
-      lines.push({
-        type: 'row',
-        left: st.product + ' x' + st.quantity,
-        right: { text: st.total.toFixed(2), icon: useIcon }
-      })
-    })
-  }
-  lines.push({ type: 'center', text: '----------------' })
-  lines.push({
-    type: 'row',
-    left: 'Total Vendas',
-    right: { text: totalSales.value.toFixed(2), icon: useIcon }
-  })
-  if (returnStats.value.length) {
-    lines.push({
-      type: 'row',
-      left: 'Total Devoluções',
-      right: { text: totalReturns.value.toFixed(2), icon: useIcon }
-    })
-    lines.push({
-      type: 'row',
-      left: 'Total Real',
-      right: { text: totalNet.value.toFixed(2), icon: useIcon }
-    })
-  }
-  lines.push({ type: 'center', text: '----------------' })
-  lines.push({ type: 'center', text: formatDatePT(new Date().toISOString()) })
-  lines.push({ type: 'center', text: 'Este talão não tem valor legal.' })
-
-  canvas.width = width
-  canvas.height = margin * 2 + lines.length * lineHeight
-
-  const draw = icon => {
-    ctx.fillStyle = '#fff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = '#000'
-    ctx.font = '16px sans-serif'
-    ctx.textBaseline = 'middle'
-
-    lines.forEach((line, idx) => {
-      const y = margin + idx * lineHeight + lineHeight / 2
-      if (line.type === 'center') {
-        ctx.textAlign = 'center'
-        ctx.fillText(line.text, width / 2, y)
-      } else if (line.type === 'row') {
-        ctx.textAlign = 'left'
-        ctx.fillText(line.left, margin, y)
-
-        const rightX = width - margin
-        const rightText = typeof line.right === 'string' ? line.right : line.right.text
-        ctx.textAlign = 'right'
-        ctx.fillText(rightText, rightX, y)
-
-        const showIcon = typeof line.right === 'object' && line.right.icon && icon
-        if (showIcon) {
-          const textWidth = ctx.measureText(rightText).width
-          const iconX = rightX - textWidth - iconSpacing - iconSize
-          const iconY = y - iconSize / 2
-          ctx.drawImage(icon, iconX, iconY, iconSize, iconSize)
-        }
-      }
-    })
-
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-    }, 'image/png')
-  }
-
-  if (!useIcon) {
-    draw(null)
-    return
-  }
-
-  const icon = new Image()
-  icon.src = iconSrc
-  if (icon.complete) {
-    draw(icon)
-  } else {
-    icon.onload = () => draw(icon)
-    icon.onerror = () => draw(null)
-  }
+  const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); const lineHeight = 20; const margin = 20; const width = 280; const useIcon = useScarf.value
+  const lines = [{ type: 'center', text: eventName?.value || 'Evento' }, { type: 'center', text: 'Resumo do Dia' }, { type: 'center', text: '----------------' }]
+  salesStats.value.forEach(st => lines.push({ type: 'row', left: `${st.product} x${st.quantity}`, right: { text: st.total.toFixed(2), icon: useIcon } }))
+  if (returnStats.value.length) { lines.push({ type: 'center', text: '----------------' }, { type: 'center', text: 'Devoluções' }); returnStats.value.forEach(st => lines.push({ type: 'row', left: `${st.product} x${st.quantity}`, right: { text: st.total.toFixed(2), icon: useIcon } })) }
+  lines.push({ type: 'center', text: '----------------' }, { type: 'row', left: 'Total Vendas', right: { text: totalSales.value.toFixed(2), icon: useIcon } }, { type: 'row', left: 'Total Devoluções', right: { text: totalReturns.value.toFixed(2), icon: useIcon } }, { type: 'row', left: 'Total Real', right: { text: totalNet.value.toFixed(2), icon: useIcon } }, { type: 'center', text: '----------------' }, { type: 'center', text: formatDatePT(new Date().toISOString()) }, { type: 'center', text: 'Este talão não tem valor legal.' })
+  canvas.width = width; canvas.height = margin * 2 + lines.length * lineHeight
+  const draw = icon => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, canvas.height); ctx.fillStyle = '#000'; ctx.font = '16px sans-serif'; ctx.textBaseline = 'middle'; lines.forEach((line, idx) => { const y = margin + idx * lineHeight + lineHeight / 2; if (line.type === 'center') { ctx.textAlign = 'center'; ctx.fillText(line.text, width / 2, y) } else { ctx.textAlign = 'left'; ctx.fillText(line.left, margin, y); ctx.textAlign = 'right'; ctx.fillText(line.right.text, width - margin, y); if (line.right.icon && icon) { const tw = ctx.measureText(line.right.text).width; ctx.drawImage(icon, width - margin - tw - 22, y - 8, 16, 16) } } }); canvas.toBlob(blob => window.open(URL.createObjectURL(blob), '_blank'), 'image/png') }
+  if (!useIcon) return draw(null)
+  const icon = new Image(); icon.src = '/lenco.png'; if (icon.complete) draw(icon); else { icon.onload = () => draw(icon); icon.onerror = () => draw(null) }
 }
 </script>
+
+<style scoped>
+.summary-content { display: grid; gap: 24px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.metric-card .v-card-text { position: relative; padding: 22px; }
+.metric-card p { margin: 18px 0 4px; color: var(--pos-muted); font-size: .8rem; font-weight: 600; }
+.metric-card strong { color: var(--pos-navy); font-size: clamp(1.45rem, 3vw, 2rem); }
+.metric-icon { display: grid; place-items: center; width: 42px; height: 42px; color: var(--pos-navy); background: #eaf0ec; border-radius: 13px; }
+.metric-icon--sales { color: #207a55; background: #e6f5ee; }
+.metric-icon--returns { color: var(--pos-danger); background: #fbeaec; }
+.metric-card--net { color: white; background: var(--pos-navy) !important; }
+.metric-card--net p, .metric-card--net strong { color: white; }
+.metric-card--net .metric-icon { color: var(--pos-navy); background: var(--pos-accent); }
+.summary-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+.summary-header h2, .summary-header p { margin: 0; }
+.summary-header h2 { color: var(--pos-navy); font: 700 1.2rem 'Outfit', sans-serif; }
+.summary-header p { margin-top: 3px; color: var(--pos-muted); font-size: .82rem; }
+.summary-table__head, .summary-table__row { display: grid; grid-template-columns: minmax(140px, 1fr) 120px 70px 110px; align-items: center; gap: 12px; }
+.summary-table__head { padding: 10px 14px; color: var(--pos-muted); border-bottom: 1px solid var(--pos-line); font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.summary-table__row { min-height: 58px; padding: 9px 14px; border-bottom: 1px solid #edf1ee; }
+.summary-table__row > :last-child, .summary-table__head > :last-child { text-align: right; }
+.summary-table__row > :nth-child(3), .summary-table__head > :nth-child(3) { text-align: center; }
+.summary-table__row strong { color: var(--pos-navy); }
+.summary-table__row--return { background: #fffafa; }
+.close-day { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding: 18px 20px; border: 1px solid #f1d9dc; border-radius: 16px; background: #fffafa; }
+.close-day strong, .close-day p { margin: 0; }
+.close-day strong { color: var(--pos-navy); }
+.close-day p { margin-top: 2px; color: var(--pos-muted); font-size: .8rem; }
+.summary-empty h2 { margin: 0 0 6px; color: var(--pos-navy); font: 700 1.3rem 'Outfit', sans-serif; }
+.summary-empty p { margin: 0; }
+.danger-icon { display: grid; place-items: center; width: 48px; height: 48px; color: var(--pos-danger); background: #fbeaec; border-radius: 14px; }
+.dialog-title { margin: 16px 0 6px; color: var(--pos-navy); font: 700 1.35rem 'Outfit', sans-serif; }
+.dialog-copy { margin: 0; color: var(--pos-muted); line-height: 1.5; }
+@media (max-width: 767px) {
+  .summary-content { gap: 16px; }
+  .metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric-card .v-card-text { padding: 14px; }
+  .metric-card p { margin: 12px 0 2px; font-size: .72rem; }
+  .metric-card strong { font-size: 1.2rem; }
+  .metric-card--net { grid-column: 1 / -1; }
+  .metric-card--net .v-card-text { display: grid; grid-template-columns: 44px 1fr; align-items: center; column-gap: 12px; }
+  .metric-card--net p { align-self: end; margin: 0; }
+  .metric-card--net strong { grid-column: 2; }
+  .summary-header, .close-day { align-items: stretch; flex-direction: column; }
+  .summary-header .v-btn, .close-day .v-btn { width: 100%; }
+  .summary-table__head { display: none; }
+  .summary-table { display: grid; gap: 10px; }
+  .summary-table__row { grid-template-columns: 1fr auto; gap: 8px 12px; min-width: 0; min-height: 0; padding: 14px; border: 1px solid var(--pos-line); border-radius: 14px; }
+  .summary-table__row > :nth-child(3), .summary-table__row > :last-child { display: flex; justify-content: space-between; grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid #edf1ee; text-align: right; }
+  .summary-table__row > [data-label]::before { content: attr(data-label); color: var(--pos-muted); font-size: .72rem; font-weight: 600; }
+  .close-day { margin-top: 18px; padding: 16px; }
+}
+</style>
