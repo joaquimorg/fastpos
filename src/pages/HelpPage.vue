@@ -32,7 +32,7 @@
 <script setup>
 const sections = [
   { title: 'Registar venda', icon: 'mdi-cash-register', items: ['Use + e − para ajustar quantidades.', 'Quantidades negativas registam devoluções.', 'Indique o valor recebido para calcular o troco.', 'No final pode gerar um talão em imagem.'] },
-  { title: 'Produtos e evento', icon: 'mdi-package-variant-closed', items: ['Defina o nome do evento e a moeda.', 'Crie produtos com nome e preço.', 'Produtos já vendidos ficam protegidos contra alterações.'] },
+  { title: 'Produtos e evento', icon: 'mdi-package-variant-closed', items: ['Defina o nome do evento e a moeda.', 'Crie produtos com nome e preço.', 'Exporte ou importe o catálogo através de um ficheiro JSON.', 'Produtos já vendidos ficam protegidos contra alterações.'] },
   { title: 'Resumo do dia', icon: 'mdi-chart-box-outline', items: ['Consulte totais por produto.', 'Veja vendas, devoluções e valor líquido.', 'Ao fechar, o dia é arquivado antes de iniciar uma nova operação.'] },
 ]
 const currentYear = new Date().getFullYear()

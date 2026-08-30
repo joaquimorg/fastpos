@@ -23,6 +23,7 @@
         </v-card-text>
       </v-card>
       <ProductManager :products="products" @update="updateProducts" />
+      <SettingsTransfer />
       <GoogleSheetsSettings />
     </div>
   </div>
@@ -31,13 +32,13 @@
 import { inject, computed } from 'vue'
 import ProductManager from '../components/ProductManager.vue'
 import GoogleSheetsSettings from '../components/GoogleSheetsSettings.vue'
+import SettingsTransfer from '../components/SettingsTransfer.vue'
 const products = inject('products'); const updateProducts = inject('updateProducts'); const eventName = inject('eventName'); const setEventName = inject('setEventName'); const currencyPreference = inject('currencyPreference'); const setCurrencyPreference = inject('setCurrencyPreference')
 const eventNameModel = computed({ get: () => eventName.value, set: val => setEventName(val || '') })
 const currencyPreferenceModel = computed({ get: () => currencyPreference.value, set: val => setCurrencyPreference(val) })
 </script>
 <style scoped>
 .settings-grid { display: grid; grid-template-columns: minmax(260px, .78fr) minmax(380px, 1.22fr); gap: 24px; align-items: start; }
-.settings-card { position: sticky; top: 24px; }
 .card-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
 .card-heading h2, .card-heading p { margin: 0; }
 .card-heading h2 { color: var(--pos-navy); font: 700 1.15rem 'Outfit', sans-serif; }
@@ -49,5 +50,5 @@ const currencyPreferenceModel = computed({ get: () => currencyPreference.value, 
 .currency-option strong, .currency-option small { display: block; }
 .currency-option small { color: var(--pos-muted); font-size: .72rem; }
 .euro-badge { display: grid; place-items: center; width: 24px; height: 24px; color: var(--pos-primary); background: #e8f5f7; border-radius: 50%; font-weight: 800; }
-@media (max-width: 959px) { .settings-grid { grid-template-columns: 1fr; } .settings-card { position: static; } }
+@media (max-width: 959px) { .settings-grid { grid-template-columns: 1fr; } }
 </style>

@@ -208,14 +208,15 @@ provide('products', products); provide('sales', sales); provide('updateProducts'
 .sidebar-legal a:hover { color: var(--pos-accent); text-decoration: underline; }
 .status-dot { width: 9px; height: 9px; margin-top: 4px; background: #d9ef56; border-radius: 50%; box-shadow: 0 0 0 4px rgba(217,239,86,.14); }
 .status-dot--pending { background: #ffbd59; box-shadow: 0 0 0 4px rgba(255,189,89,.14); }
+.app-main, #main-content { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; }
 .app-main { min-height: 100dvh; }
 .mobile-header { position: sticky; z-index: 15; top: 0; align-items: center; justify-content: space-between; min-height: calc(68px + env(safe-area-inset-top)); padding: calc(8px + env(safe-area-inset-top)) 16px 8px; border-bottom: 1px solid #e0e7e3; background: rgba(255,255,255,.94); backdrop-filter: blur(12px); }
 .mobile-header img { display: block; width: 100px; height: auto; }
 .event-pill { overflow: hidden; max-width: 46vw; padding: 7px 10px; color: #06647d; background: #e8f5f7; border-radius: 999px; font-size: .75rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.mobile-nav { position: fixed; z-index: 30; right: 0; bottom: 0; left: 0; min-height: calc(60px + env(safe-area-inset-bottom)); padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.14); background: #112d38; box-shadow: 0 -6px 24px rgba(17,45,56,.14); }
+.mobile-nav { position: fixed !important; z-index: 100; right: 0; bottom: 0 !important; left: 0; width: 100%; max-width: 100%; min-height: calc(60px + env(safe-area-inset-bottom)); padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); overflow: hidden; border-top: 1px solid rgba(255,255,255,.14); background: #112d38; box-shadow: 0 -6px 24px rgba(17,45,56,.14); transform: translate3d(0,0,0); backface-visibility: hidden; }
 .mobile-nav__item { align-items: center; justify-content: center; flex: 1 1 25%; flex-direction: column; width: 25%; min-width: 0; min-height: 52px; gap: 1px; color: #a9bec5; border-radius: 10px; font-size: .65rem; font-weight: 600; text-decoration: none; }
 .mobile-nav__item.router-link-exact-active { color: #112d38; background: #d9ef56; }
-@media (max-width: 959px) { .mobile-nav, .mobile-nav__item { display: flex !important; } }
+@media (max-width: 959px) { html, body { touch-action: pan-y pinch-zoom; } .mobile-nav, .mobile-nav__item { display: flex !important; } }
 @media (min-width: 960px) { .app-main { padding-left: 260px; } .mobile-nav { display: none !important; } }
 @media (max-width: 380px) { .mobile-nav { padding-inline: 4px; } .mobile-nav__item { font-size: .6rem; } }
 </style>
