@@ -38,7 +38,7 @@
 <script setup>
 import { ref, provide, watch, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { authorizeGoogleSheets, createSalesSpreadsheet, disconnectGoogleSheets, getDeviceId, isGoogleSheetsAvailable, syncDailyReport } from '../services/googleSheets'
+import { authorizeGoogleSheets, createSalesSpreadsheet, disconnectGoogleSheets, getDeviceLabel, isGoogleSheetsAvailable, isSpreadsheetPickerAvailable, pickExistingSpreadsheet, setDeviceLabel, spreadsheetExists, syncDailyReport } from '../services/googleSheets'
 const logoSrc = '/fastpos-logo.png'
 const route = useRoute()
 const navItems = [
@@ -55,7 +55,9 @@ const eventName = ref(localStorage.getItem('event_name') || '')
 const currencyPreference = ref(localStorage.getItem('currency_pref') === 'euro' ? 'euro' : 'scarf')
 const closedDays = ref(JSON.parse(localStorage.getItem('closed_day_reports') || '[]'))
 const googleSheetsSettings = ref(JSON.parse(localStorage.getItem('google_sheets_settings') || '{"spreadsheetId":"","spreadsheetName":"","spreadsheetUrl":"","lastSync":""}'))
+const deviceLabel = ref(getDeviceLabel())
 const pendingReportsCount = computed(() => closedDays.value.filter(day => day.status !== 'synced').length)
+function updateDeviceLabel(label) { deviceLabel.value = setDeviceLabel(label) }
 function updateProducts(newList) { products.value = newList }
 function setEventName(name) { eventName.value = name }
 function setCurrencyPreference(pref) { currencyPreference.value = pref === 'euro' ? 'euro' : 'scarf' }
@@ -114,9 +116,14 @@ function buildDailyReport(day) {
   }
 }
 async function ensureSpreadsheet() {
-  if (googleSheetsSettings.value.spreadsheetId) return googleSheetsSettings.value
+  if (googleSheetsSettings.value.spreadsheetId && await spreadsheetExists(googleSheetsSettings.value.spreadsheetId)) {
+    return googleSheetsSettings.value
+  }
+  // Não há ID guardado, ou o ficheiro foi apagado/deixou de estar acessível no Drive: cria-se um novo.
   const created = await createSalesSpreadsheet()
   googleSheetsSettings.value = { ...googleSheetsSettings.value, ...created }
+  // O ficheiro é novo, por isso qualquer aba atribuída anteriormente já não existe: reenvia-se tudo.
+  closedDays.value = closedDays.value.map(day => ({ ...day, status: 'pending', error: '', sheetTitle: '' }))
   return googleSheetsSettings.value
 }
 async function syncStoredReports() {
@@ -124,7 +131,7 @@ async function syncStoredReports() {
   const pending = closedDays.value.filter(day => day.status !== 'synced')
   for (const day of pending) {
     try {
-      day.sheetTitle = await syncDailyReport(settings.spreadsheetId, buildDailyReport(day), { deviceId: getDeviceId(), knownTitle: day.sheetTitle })
+      day.sheetTitle = await syncDailyReport(settings.spreadsheetId, buildDailyReport(day), { deviceLabel: deviceLabel.value })
       day.status = 'synced'; day.syncedAt = new Date().toISOString(); day.error = ''
       googleSheetsSettings.value.lastSync = day.syncedAt
     } catch (error) {
@@ -140,6 +147,14 @@ async function syncStoredReports() {
 async function connectGoogleSheets() {
   await authorizeGoogleSheets()
   await ensureSpreadsheet()
+  const synced = await syncStoredReports()
+  return { synced, ...googleSheetsSettings.value }
+}
+async function connectToExistingSpreadsheet() {
+  await authorizeGoogleSheets()
+  const picked = await pickExistingSpreadsheet()
+  if (!picked) return { synced: 0, cancelled: true }
+  googleSheetsSettings.value = { ...googleSheetsSettings.value, ...picked }
   const synced = await syncStoredReports()
   return { synced, ...googleSheetsSettings.value }
 }
@@ -181,7 +196,7 @@ watch(() => route.fullPath, async () => {
   await nextTick()
   document.getElementById('main-content')?.focus({ preventScroll: true })
 })
-provide('products', products); provide('sales', sales); provide('updateProducts', updateProducts); provide('registerSale', registerSale); provide('closeDay', closeDay); provide('eventName', eventName); provide('setEventName', setEventName); provide('currencyPreference', currencyPreference); provide('setCurrencyPreference', setCurrencyPreference); provide('closedDays', closedDays); provide('googleSheetsSettings', googleSheetsSettings); provide('pendingReportsCount', pendingReportsCount); provide('googleSheetsAvailable', isGoogleSheetsAvailable()); provide('connectGoogleSheets', connectGoogleSheets); provide('syncPendingReports', syncPendingReports); provide('disconnectGoogleSheets', disconnectSheets)
+provide('products', products); provide('sales', sales); provide('updateProducts', updateProducts); provide('registerSale', registerSale); provide('closeDay', closeDay); provide('eventName', eventName); provide('setEventName', setEventName); provide('currencyPreference', currencyPreference); provide('setCurrencyPreference', setCurrencyPreference); provide('closedDays', closedDays); provide('googleSheetsSettings', googleSheetsSettings); provide('pendingReportsCount', pendingReportsCount); provide('googleSheetsAvailable', isGoogleSheetsAvailable()); provide('connectGoogleSheets', connectGoogleSheets); provide('connectToExistingSpreadsheet', connectToExistingSpreadsheet); provide('spreadsheetPickerAvailable', isSpreadsheetPickerAvailable()); provide('syncPendingReports', syncPendingReports); provide('disconnectGoogleSheets', disconnectSheets); provide('deviceLabel', deviceLabel); provide('setDeviceLabel', updateDeviceLabel)
 </script>
 
 <style scoped>

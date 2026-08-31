@@ -14,9 +14,11 @@
       <template v-else-if="!isConnected">
         <div class="privacy-note">
           <v-icon icon="mdi-shield-check-outline" size="22" />
-          <p><strong>O ficheiro fica no seu Google Drive.</strong><span>O fastPOS só pode utilizar o relatório criado por esta aplicação.</span></p>
+          <p><strong>O ficheiro fica no seu Google Drive.</strong><span>O fastPOS só pode utilizar o relatório criado ou escolhido por esta aplicação.</span></p>
         </div>
-        <v-btn color="primary" size="large" block prepend-icon="mdi-google" :loading="working" @click="connect">Ligar conta Google</v-btn>
+        <v-btn color="primary" size="large" block prepend-icon="mdi-google" :loading="working === 'create'" :disabled="Boolean(working)" @click="connect">Criar novo relatório</v-btn>
+        <v-btn v-if="pickerAvailable" class="mt-2" variant="tonal" color="secondary" size="large" block prepend-icon="mdi-file-find-outline" :loading="working === 'pick'" :disabled="Boolean(working)" @click="connectExisting">Ligar a uma folha já criada</v-btn>
+        <p v-if="pickerAvailable" class="pending-copy pending-copy--muted">Use esta opção para ligar este dispositivo ao mesmo relatório de outro dispositivo com a mesma conta Google.</p>
         <p v-if="pendingCount" class="pending-copy"><v-icon icon="mdi-cloud-upload-outline" size="18" /> {{ pendingCount }} {{ pendingCount === 1 ? 'dia será sincronizado' : 'dias serão sincronizados' }} depois da ligação.</p>
       </template>
 
@@ -34,8 +36,19 @@
           <span><v-icon icon="mdi-cloud-check-outline" /></span>
           <div><strong>Tudo sincronizado</strong><small>Não existem relatórios por enviar.</small></div>
         </div>
+        <v-text-field
+          v-model="deviceLabelInput"
+          class="mt-4"
+          label="Nome deste dispositivo"
+          hint="Usado para identificar a aba de cada dia neste relatório (ex.: “Caixa 1”)."
+          persistent-hint
+          density="comfortable"
+          variant="outlined"
+          @blur="saveDeviceLabel"
+          @keyup.enter="saveDeviceLabel"
+        />
         <div class="sheets-actions">
-          <v-btn v-if="pendingCount" color="primary" prepend-icon="mdi-sync" :loading="working" @click="sync">Sincronizar agora</v-btn>
+          <v-btn v-if="pendingCount" color="primary" prepend-icon="mdi-sync" :loading="working === 'sync'" @click="sync">Sincronizar agora</v-btn>
           <v-btn variant="text" color="secondary" @click="disconnectDialog = true">Desligar</v-btn>
         </div>
       </template>
@@ -53,35 +66,51 @@
 </template>
 
 <script setup>
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 
 const settings = inject('googleSheetsSettings')
 const pendingReportsCount = inject('pendingReportsCount')
 const available = inject('googleSheetsAvailable', false)
+const pickerAvailable = inject('spreadsheetPickerAvailable', false)
 const connectGoogleSheets = inject('connectGoogleSheets')
+const connectToExistingSpreadsheet = inject('connectToExistingSpreadsheet')
 const syncPendingReports = inject('syncPendingReports')
 const disconnectGoogleSheets = inject('disconnectGoogleSheets')
-const working = ref(false); const feedback = ref(null); const disconnectDialog = ref(false)
+const deviceLabel = inject('deviceLabel')
+const setDeviceLabel = inject('setDeviceLabel')
+const working = ref(''); const feedback = ref(null); const disconnectDialog = ref(false)
+const deviceLabelInput = ref(deviceLabel.value)
+watch(deviceLabel, v => { deviceLabelInput.value = v })
 const isConnected = computed(() => Boolean(settings.value.spreadsheetId))
 const pendingCount = computed(() => pendingReportsCount.value)
 const lastSyncLabel = computed(() => settings.value.lastSync ? `Última sincronização: ${new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(settings.value.lastSync))}` : 'Relatório pronto a receber o primeiro dia')
 
 async function connect() {
-  working.value = true; feedback.value = null
+  working.value = 'create'; feedback.value = null
   try {
     const result = await connectGoogleSheets()
     feedback.value = { type: 'success', message: result.synced ? `Conta ligada e ${result.synced} ${result.synced === 1 ? 'dia sincronizado' : 'dias sincronizados'}.` : 'Conta ligada e relatório criado no seu Google Drive.' }
   } catch (error) { feedback.value = { type: 'error', message: error.message } }
-  finally { working.value = false }
+  finally { working.value = '' }
+}
+async function connectExisting() {
+  working.value = 'pick'; feedback.value = null
+  try {
+    const result = await connectToExistingSpreadsheet()
+    if (result.cancelled) return
+    feedback.value = { type: 'success', message: result.synced ? `Ligado ao relatório e ${result.synced} ${result.synced === 1 ? 'dia sincronizado' : 'dias sincronizados'}.` : 'Ligado ao relatório existente.' }
+  } catch (error) { feedback.value = { type: 'error', message: error.message } }
+  finally { working.value = '' }
 }
 async function sync() {
-  working.value = true; feedback.value = null
+  working.value = 'sync'; feedback.value = null
   try {
     const count = await syncPendingReports()
     feedback.value = { type: 'success', message: count ? `${count} ${count === 1 ? 'dia sincronizado' : 'dias sincronizados'} com sucesso.` : 'O relatório já estava atualizado.' }
   } catch (error) { feedback.value = { type: 'error', message: `${error.message} Os dados continuam guardados neste dispositivo.` } }
-  finally { working.value = false }
+  finally { working.value = '' }
 }
+function saveDeviceLabel() { setDeviceLabel(deviceLabelInput.value) }
 function disconnect() {
   disconnectGoogleSheets(); disconnectDialog.value = false
   feedback.value = { type: 'info', message: 'Conta desligada. O ficheiro não foi eliminado do Google Drive.' }
@@ -101,6 +130,7 @@ function disconnect() {
 .privacy-note p, .privacy-note strong, .privacy-note span { display: block; margin: 0; }
 .privacy-note span { margin-top: 2px; color: var(--pos-muted); font-size: .78rem; line-height: 1.4; }
 .pending-copy { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 12px 0 0; color: #86601c; font-size: .78rem; }
+.pending-copy--muted { color: var(--pos-muted); text-align: center; }
 .report-link { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 13px; color: inherit; border: 1px solid var(--pos-line); border-radius: 15px; text-decoration: none; transition: 160ms ease; }
 .report-link:hover { border-color: #8bc79d; background: #fbfefc; transform: translateY(-1px); }
 .report-link > span { display: grid; place-items: center; width: 44px; height: 44px; color: #188038; background: #e9f6ed; border-radius: 12px; }

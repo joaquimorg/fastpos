@@ -86,6 +86,7 @@
 
 <script setup>
 import { ref, computed, toRefs, inject } from 'vue'
+import { openReceiptImage } from '../utils/receiptCanvas'
 const props = defineProps({ products: { type: Array, required: true }, eventName: { type: String, default: '' } })
 const emit = defineEmits(['sale-registered'])
 const { products, eventName } = toRefs(props)
@@ -111,16 +112,30 @@ function finalizeSale() {
   const reg = { items: selectedItems.value.map(i => ({ ...i })), total: totalNumber, given: received, change: (received - totalNumber).toFixed(2), date: new Date().toISOString() }
   emit('sale-registered', reg); lastSale.value = reg; mobileCheckout.value = false; saleComplete.value = true
 }
-function gerarTalao() {
+async function gerarTalao() {
   if (!lastSale.value.items.length) return
-  const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); const lineHeight = 20; const margin = 20; const width = 280; const useIcon = useScarf.value
-  const lines = [{ type: 'center', text: eventName.value || 'Venda' }, { type: 'center', text: '----------------' }]
-  lastSale.value.items.forEach(it => lines.push({ type: 'row', left: `${it.product} x${it.quantity}`, right: { text: getProductPriceNumber(it.product, it.quantity).toFixed(2), icon: useIcon } }))
-  lines.push({ type: 'center', text: '----------------' }, { type: 'row', left: 'Total', right: { text: lastSale.value.total.toFixed(2), icon: useIcon } }, { type: 'row', left: 'Valor dado', right: { text: lastSale.value.given.toFixed(2), icon: useIcon } }, { type: 'row', left: lastSale.value.total < 0 ? 'Devolver' : 'Troco', right: { text: lastSale.value.change, icon: useIcon } }, { type: 'center', text: '----------------' }, { type: 'center', text: formatDatePT(lastSale.value.date) }, { type: 'center', text: 'Este talão não tem valor legal.' })
-  canvas.width = width; canvas.height = margin * 2 + lines.length * lineHeight
-  const draw = icon => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#000'; ctx.font = '16px sans-serif'; ctx.textBaseline = 'middle'; lines.forEach((line, idx) => { const y = margin + idx * lineHeight + lineHeight / 2; if (line.type === 'center') { ctx.textAlign = 'center'; ctx.fillText(line.text, width / 2, y) } else { ctx.textAlign = 'left'; ctx.fillText(line.left, margin, y); const rightX = width - margin; ctx.textAlign = 'right'; ctx.fillText(line.right.text, rightX, y); if (line.right.icon && icon) { const textWidth = ctx.measureText(line.right.text).width; ctx.drawImage(icon, rightX - textWidth - 22, y - 8, 16, 16) } } }); canvas.toBlob(blob => window.open(URL.createObjectURL(blob), '_blank'), 'image/png') }
-  if (!useIcon) return draw(null)
-  const icon = new Image(); icon.src = '/lenco.png'; if (icon.complete) draw(icon); else { icon.onload = () => draw(icon); icon.onerror = () => draw(null) }
+  const changeLabel = lastSale.value.total < 0 ? 'Valor a devolver' : 'Troco'
+  const blocks = [
+    { type: 'brand' },
+    { type: 'title', text: eventName.value || 'Talão de venda' },
+    { type: 'meta', text: formatDatePT(lastSale.value.date) },
+    { type: 'divider' },
+    ...lastSale.value.items.map(it => ({
+      type: 'item',
+      name: it.product,
+      sub: `${Math.abs(it.quantity)} × ${useScarf.value ? getUnitPriceNumber(it.product).toFixed(2) : `€ ${getUnitPriceNumber(it.product).toFixed(2)}`}${it.quantity < 0 ? ' · devolução' : ''}`,
+      amount: getProductPriceNumber(it.product, it.quantity),
+      negative: it.quantity < 0,
+    })),
+    { type: 'divider' },
+    { type: 'total', label: 'Total', amount: lastSale.value.total, tone: 'navy' },
+    { type: 'kv', label: 'Valor dado', amount: lastSale.value.given },
+    { type: 'total', label: changeLabel, amount: Number(lastSale.value.change), tone: 'accent' },
+    { type: 'divider' },
+    { type: 'thanks' },
+    { type: 'legal' },
+  ]
+  await openReceiptImage(blocks, { currency: useScarf.value ? 'scarf' : 'euro' })
 }
 function novaVenda() { quantities.value = {}; given.value = null; saleComplete.value = false; lastSale.value = { items: [], total: 0, given: 0, change: 0, date: '' } }
 </script>

@@ -25,11 +25,12 @@
     <v-card rounded="xl"><v-card-text class="pa-6"><span class="close-icon"><v-icon icon="mdi-calendar-check-outline" /></span><h2 class="dialog-title">Fechar o dia?</h2><p class="dialog-copy">As vendas ficam arquivadas em segurança. {{ sheetsConnected ? 'Será criada ou atualizada a aba de hoje no seu relatório.' : 'Pode ligar o Google Sheets mais tarde para as sincronizar.' }}</p></v-card-text><v-card-actions class="pa-4 pt-0"><v-spacer /><v-btn variant="text" :disabled="closing" @click="closeDialog = false">Cancelar</v-btn><v-btn color="primary" :loading="closing" @click="confirmCloseDay">Fechar dia</v-btn></v-card-actions></v-card>
   </v-dialog>
 
-  <v-snackbar v-model="showFeedback" :color="feedback.color" timeout="6000" location="top"><v-icon :icon="feedback.icon" class="mr-2" />{{ feedback.message }}<template #actions><v-btn variant="text" @click="showFeedback = false">Fechar</v-btn></template></v-snackbar>
+  <v-snackbar v-model="showFeedback" :color="feedback.color" timeout="6000" location="top"><v-icon :icon="feedback.icon" class="mr-2" />{{ feedback.message }}<template #actions><v-btn variant="text" color="white" @click="showFeedback = false">Fechar</v-btn></template></v-snackbar>
 </template>
 
 <script setup>
 import { computed, inject, ref } from 'vue'
+import { openReceiptImage } from '../utils/receiptCanvas'
 const props = defineProps({ sales: { type: Array, required: true }, products: { type: Array, default: () => [] } })
 const closeDay = inject('closeDay'); const googleSheetsSettings = inject('googleSheetsSettings', ref({}))
 const closeDialog = ref(false); const closing = ref(false); const showFeedback = ref(false); const feedback = ref({ color: 'success', icon: 'mdi-check-circle-outline', message: '' }); const currencyPreference = inject('currencyPreference', ref('scarf')); const eventName = inject('eventName', ref(''))
@@ -50,17 +51,27 @@ async function confirmCloseDay() {
   else feedback.value = { color: 'warning', icon: 'mdi-cloud-alert-outline', message: 'Dia guardado no dispositivo. A sincronização pode ser repetida nas definições.' }
   showFeedback.value = true
 }
-function gerarTalaoResumo() {
+async function gerarTalaoResumo() {
   if (!salesStats.value.length && !returnStats.value.length) return
-  const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); const lineHeight = 20; const margin = 20; const width = 280; const useIcon = useScarf.value
-  const lines = [{ type: 'center', text: eventName?.value || 'Evento' }, { type: 'center', text: 'Resumo do Dia' }, { type: 'center', text: '----------------' }]
-  salesStats.value.forEach(st => lines.push({ type: 'row', left: `${st.product} x${st.quantity}`, right: { text: st.total.toFixed(2), icon: useIcon } }))
-  if (returnStats.value.length) { lines.push({ type: 'center', text: '----------------' }, { type: 'center', text: 'Devoluções' }); returnStats.value.forEach(st => lines.push({ type: 'row', left: `${st.product} x${st.quantity}`, right: { text: st.total.toFixed(2), icon: useIcon } })) }
-  lines.push({ type: 'center', text: '----------------' }, { type: 'row', left: 'Total Vendas', right: { text: totalSales.value.toFixed(2), icon: useIcon } }, { type: 'row', left: 'Total Devoluções', right: { text: totalReturns.value.toFixed(2), icon: useIcon } }, { type: 'row', left: 'Total Real', right: { text: totalNet.value.toFixed(2), icon: useIcon } }, { type: 'center', text: '----------------' }, { type: 'center', text: formatDatePT(new Date().toISOString()) }, { type: 'center', text: 'Este talão não tem valor legal.' })
-  canvas.width = width; canvas.height = margin * 2 + lines.length * lineHeight
-  const draw = icon => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, canvas.height); ctx.fillStyle = '#000'; ctx.font = '16px sans-serif'; ctx.textBaseline = 'middle'; lines.forEach((line, idx) => { const y = margin + idx * lineHeight + lineHeight / 2; if (line.type === 'center') { ctx.textAlign = 'center'; ctx.fillText(line.text, width / 2, y) } else { ctx.textAlign = 'left'; ctx.fillText(line.left, margin, y); ctx.textAlign = 'right'; ctx.fillText(line.right.text, width - margin, y); if (line.right.icon && icon) { const tw = ctx.measureText(line.right.text).width; ctx.drawImage(icon, width - margin - tw - 22, y - 8, 16, 16) } } }); canvas.toBlob(blob => window.open(URL.createObjectURL(blob), '_blank'), 'image/png') }
-  if (!useIcon) return draw(null)
-  const icon = new Image(); icon.src = '/lenco.png'; if (icon.complete) draw(icon); else { icon.onload = () => draw(icon); icon.onerror = () => draw(null) }
+  const unitLabel = st => { const value = (st.quantity ? st.total / st.quantity : 0).toFixed(2); return useScarf.value ? value : `€ ${value}` }
+  const blocks = [
+    { type: 'brand' },
+    { type: 'title', text: eventName?.value || 'Resumo do dia' },
+    { type: 'meta', text: formatDatePT(new Date().toISOString()) },
+    { type: 'divider' },
+    ...salesStats.value.map(st => ({ type: 'item', name: st.product, sub: `${st.quantity} × ${unitLabel(st)}`, amount: st.total, negative: false })),
+    ...(returnStats.value.length ? [
+      { type: 'label', text: 'Devoluções' },
+      ...returnStats.value.map(st => ({ type: 'item', name: st.product, sub: `${st.quantity} × ${unitLabel(st)} · devolução`, amount: st.total, negative: true })),
+    ] : []),
+    { type: 'divider' },
+    { type: 'kv', label: 'Total vendas', amount: totalSales.value },
+    { type: 'kv', label: 'Total devoluções', amount: totalReturns.value, negative: true },
+    { type: 'total', label: 'Total real', amount: totalNet.value, tone: 'navy' },
+    { type: 'divider' },
+    { type: 'legal' },
+  ]
+  await openReceiptImage(blocks, { currency: useScarf.value ? 'scarf' : 'euro' })
 }
 </script>
 

@@ -67,6 +67,20 @@ VITE_GOOGLE_CLIENT_ID=000000000000-example.apps.googleusercontent.com
 
 Não é necessário nem deve ser configurado um *client secret* no frontend. O ID do relatório, o estado da sincronização e os dias pendentes ficam guardados apenas no dispositivo do utilizador.
 
+### Ligar vários dispositivos ao mesmo relatório (opcional)
+
+Como o âmbito é `drive.file`, cada dispositivo só tem acesso aos ficheiros que ele próprio criou. Para permitir que um dispositivo se ligue a um relatório já criado noutro dispositivo (com a mesma conta Google), a app usa o **seletor de ficheiros da Google (Picker)**, que concede esse acesso pontualmente ao ficheiro escolhido, sem alargar o âmbito OAuth:
+
+1. Ative a **Google Picker API** no mesmo projeto do Google Cloud.
+2. Crie uma **Chave de API** (Credenciais > Criar credenciais > Chave de API) e restrinja-a à Google Picker API e às origens do site.
+3. Coloque a chave em `.env.local`:
+
+```env
+VITE_GOOGLE_API_KEY=AIza...
+```
+
+Sem esta chave, cada dispositivo continua a poder criar e sincronizar o seu próprio relatório normalmente — só a opção "Ligar a uma folha já criada" fica indisponível. Nesse relatório partilhado, cada dispositivo escreve sempre na sua própria aba (nome da data + nome do dispositivo, editável em "Relatórios Google Sheets"); fechar o mesmo dia no mesmo dispositivo atualiza essa aba, sem sobrepor dados de outro dispositivo.
+
 ## Deploy como PWA
 
 1. Executa:

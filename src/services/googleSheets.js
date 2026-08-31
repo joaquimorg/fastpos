@@ -1,15 +1,24 @@
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
+const GAPI_SRC = 'https://apis.google.com/js/api.js'
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets'
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
-const REGISTRY_TITLE = '_fastpos_registo'
 const DEVICE_ID_KEY = 'fastpos_device_id'
+const DEVICE_LABEL_KEY = 'fastpos_device_label'
 
 let gisPromise
+let gapiPickerPromise
 let accessToken = ''
 let tokenClient
 
-// Identifica este dispositivo/navegador de forma estável, para saber a que
-// aba de cada dia pertence quando a mesma conta Google é usada em vários
+function detectDeviceLabel() {
+  const ua = navigator.userAgent || ''
+  const platform = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : ''
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Navegador'
+  return [browser, platform].filter(Boolean).join(' · ') || 'Dispositivo'
+}
+
+// Identifica este dispositivo/navegador de forma estável, para distinguir
+// as abas criadas por cada um quando a mesma conta Google é usada em vários
 // dispositivos.
 export function getDeviceId() {
   let id = ''
@@ -19,6 +28,31 @@ export function getDeviceId() {
     try { localStorage.setItem(DEVICE_ID_KEY, id) } catch { /* localStorage indisponível */ }
   }
   return id
+}
+
+// Etiqueta gerada por omissão: browser + SO detetados não chegam para
+// distinguir dois dispositivos parecidos (ex. dois PCs com o mesmo Chrome/
+// Windows), por isso junta-se sempre um sufixo curto e único por dispositivo.
+function defaultDeviceLabel() {
+  return `${detectDeviceLabel()} (${getDeviceId().replace(/[^a-z0-9]/gi, '').slice(0, 4) || '0000'})`
+}
+
+// Nome legível deste dispositivo, usado nas abas do relatório (ex.: "Chrome · Windows (a1b2)").
+// O utilizador pode personalizá-lo em qualquer altura.
+export function getDeviceLabel() {
+  let label = ''
+  try { label = localStorage.getItem(DEVICE_LABEL_KEY) || '' } catch { /* localStorage indisponível */ }
+  if (!label) {
+    label = defaultDeviceLabel()
+    try { localStorage.setItem(DEVICE_LABEL_KEY, label) } catch { /* localStorage indisponível */ }
+  }
+  return label
+}
+
+export function setDeviceLabel(label) {
+  const clean = String(label || '').trim().slice(0, 40) || defaultDeviceLabel()
+  try { localStorage.setItem(DEVICE_LABEL_KEY, clean) } catch { /* localStorage indisponível */ }
+  return clean
 }
 
 function loadGoogleIdentity() {
@@ -43,6 +77,72 @@ function loadGoogleIdentity() {
 
 export function isGoogleSheetsAvailable() {
   return Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
+}
+
+export function isSpreadsheetPickerAvailable() {
+  return Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_API_KEY)
+}
+
+function loadPicker() {
+  if (window.google?.picker) return Promise.resolve()
+  if (gapiPickerPromise) return gapiPickerPromise
+  gapiPickerPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${GAPI_SRC}"]`)
+    const script = existing || document.createElement('script')
+    const onLoad = () => window.gapi.load('picker', { callback: resolve, onerror: () => reject(new Error('Não foi possível carregar o seletor de ficheiros da Google.')) })
+    const onError = () => reject(new Error('Não foi possível carregar o seletor de ficheiros da Google. Verifique a internet.'))
+    script.addEventListener('load', onLoad, { once: true })
+    script.addEventListener('error', onError, { once: true })
+    if (!existing) {
+      script.src = GAPI_SRC
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    } else if (window.gapi?.picker) {
+      resolve()
+    }
+  })
+  return gapiPickerPromise
+}
+
+// Abre o seletor de ficheiros da Google para o utilizador escolher uma folha
+// já existente (por exemplo, criada noutro dispositivo com a mesma conta) e
+// ligar-se a ela. Devolve null se o utilizador cancelar.
+export async function pickExistingSpreadsheet() {
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
+  if (!apiKey) throw new Error('A seleção de folhas existentes ainda não está configurada nesta instalação.')
+  if (!accessToken) throw new Error('É necessário voltar a autorizar a conta Google.')
+  await loadPicker()
+
+  return new Promise((resolve, reject) => {
+    try {
+      const view = new window.google.picker.DocsView(window.google.picker.ViewId.SPREADSHEETS)
+        .setMode(window.google.picker.DocsViewMode.LIST)
+        .setIncludeFolders(false)
+      const picker = new window.google.picker.PickerBuilder()
+        .setOAuthToken(accessToken)
+        .setDeveloperKey(apiKey)
+        .addView(view)
+        .setTitle('Escolha o relatório fastPOS já criado noutro dispositivo')
+        .setCallback(data => {
+          if (data.action === window.google.picker.Action.PICKED) {
+            const doc = data.docs?.[0]
+            if (!doc) { resolve(null); return }
+            resolve({
+              spreadsheetId: doc.id,
+              spreadsheetName: doc.name,
+              spreadsheetUrl: doc.url || `https://docs.google.com/spreadsheets/d/${doc.id}/edit`,
+            })
+          } else if (data.action === window.google.picker.Action.CANCEL) {
+            resolve(null)
+          }
+        })
+        .build()
+      picker.setVisible(true)
+    } catch {
+      reject(new Error('Não foi possível abrir o seletor de ficheiros da Google.'))
+    }
+  })
 }
 
 export async function authorizeGoogleSheets() {
@@ -95,6 +195,17 @@ async function googleFetch(url, options = {}) {
   return body
 }
 
+export async function spreadsheetExists(spreadsheetId) {
+  if (!spreadsheetId || !accessToken) return false
+  const response = await fetch(`${SHEETS_API}/${spreadsheetId}?fields=spreadsheetId`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (response.status === 401) accessToken = ''
+  if (response.status === 404 || response.status === 403) return false
+  if (!response.ok) throw new Error('Não foi possível confirmar o relatório no Google Sheets.')
+  return true
+}
+
 export async function createSalesSpreadsheet() {
   const title = `fastPOS — Relatório de vendas`
   const spreadsheet = await googleFetch(SHEETS_API, {
@@ -109,7 +220,7 @@ export async function createSalesSpreadsheet() {
     body: JSON.stringify({ values: [
       ['fastPOS', 'Relatório de vendas'],
       ['', ''],
-      ['Como funciona', 'Cada fecho atualiza a aba da data neste dispositivo. Se fechar o mesmo dia noutro dispositivo, é criada uma aba própria (ex.: "AAAA-MM-DD (2)").'],
+      ['Como funciona', 'Cada dispositivo tem a sua aba (data + dispositivo). Fechar o mesmo dia no mesmo dispositivo atualiza essa aba; noutro dispositivo, cria uma aba própria.'],
       ['Privacidade', 'O ficheiro pertence a esta conta Google.'],
       ['Sincronização', 'Os dados são enviados apenas quando fecha ou sincroniza um dia.'],
     ] }),
@@ -166,49 +277,24 @@ async function ensureDailySheet(spreadsheetId, title) {
   return result.replies?.[0]?.addSheet?.properties?.sheetId
 }
 
-// Regista, por data + dispositivo, qual a aba usada. Isto garante que:
-// - o mesmo dispositivo fecha o mesmo dia sempre na mesma aba (atualiza-a);
-// - um dispositivo diferente, ao fechar a mesma data, recebe uma aba nova
-//   em vez de sobrepor os dados já lá guardados.
-async function ensureRegistrySheet(spreadsheetId) {
-  const spreadsheet = await googleFetch(`${SHEETS_API}/${spreadsheetId}?fields=sheets.properties`)
-  const existing = spreadsheet.sheets?.find(sheet => sheet.properties?.title === REGISTRY_TITLE)
-  if (existing) return existing.properties.sheetId
-  const result = await googleFetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
-    method: 'POST',
-    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: REGISTRY_TITLE, hidden: true, gridProperties: { rowCount: 500, columnCount: 4 } } } }] }),
-  })
-  return result.replies?.[0]?.addSheet?.properties?.sheetId
+const SHEET_TITLE_LIMIT = 100
+
+// Nome de aba inválido em Sheets não pode conter : \ / ? * [ ]
+function sanitizeSheetTitle(title) {
+  return String(title).replace(/[:\\/?*[\]]/g, '-').trim().slice(0, SHEET_TITLE_LIMIT)
 }
 
-async function readRegistry(spreadsheetId) {
-  await ensureRegistrySheet(spreadsheetId)
-  const range = encodeURIComponent(`${escapeSheetTitle(REGISTRY_TITLE)}!A1:D500`)
-  const data = await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${range}`)
-  return data.values || []
-}
-
-async function appendRegistryRow(spreadsheetId, row) {
-  const range = encodeURIComponent(`${escapeSheetTitle(REGISTRY_TITLE)}!A1`)
-  await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
-    method: 'POST',
-    body: JSON.stringify({ values: [row] }),
-  })
-}
-
-async function resolveSheetTitle(spreadsheetId, date, deviceId) {
-  const rows = await readRegistry(spreadsheetId)
-  const dateRows = rows.filter(row => row[0] === date)
-  const own = dateRows.find(row => row[1] === deviceId)
-  if (own?.[2]) return own[2]
-  const title = dateRows.length ? `${date} (${dateRows.length + 1})` : date
-  await appendRegistryRow(spreadsheetId, [date, deviceId, title, new Date().toISOString()])
-  return title
+// Cada dispositivo escreve sempre na mesma aba (data + identificação do
+// dispositivo): reabrir o dia no mesmo dispositivo atualiza essa aba; um
+// dispositivo diferente, com o mesmo dia, escreve numa aba própria, sem
+// sobrepor os dados já guardados.
+function dailySheetTitle(date, deviceLabel) {
+  return sanitizeSheetTitle(`${date} · ${deviceLabel || getDeviceLabel()}`)
 }
 
 export async function syncDailyReport(spreadsheetId, report, options = {}) {
-  const { deviceId = getDeviceId(), knownTitle = '' } = options
-  const title = knownTitle || await resolveSheetTitle(spreadsheetId, report.date, deviceId)
+  const { deviceLabel = getDeviceLabel() } = options
+  const title = dailySheetTitle(report.date, deviceLabel)
   const sheetId = await ensureDailySheet(spreadsheetId, title)
   const rangeTitle = escapeSheetTitle(title)
   await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(`${rangeTitle}!A1:F500`)}:clear`, { method: 'POST', body: '{}' })
