@@ -1,10 +1,25 @@
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets'
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const REGISTRY_TITLE = '_fastpos_registo'
+const DEVICE_ID_KEY = 'fastpos_device_id'
 
 let gisPromise
 let accessToken = ''
 let tokenClient
+
+// Identifica este dispositivo/navegador de forma estável, para saber a que
+// aba de cada dia pertence quando a mesma conta Google é usada em vários
+// dispositivos.
+export function getDeviceId() {
+  let id = ''
+  try { id = localStorage.getItem(DEVICE_ID_KEY) || '' } catch { /* localStorage indisponível */ }
+  if (!id) {
+    id = window.crypto?.randomUUID?.() || `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    try { localStorage.setItem(DEVICE_ID_KEY, id) } catch { /* localStorage indisponível */ }
+  }
+  return id
+}
 
 function loadGoogleIdentity() {
   if (window.google?.accounts?.oauth2) return Promise.resolve()
@@ -94,7 +109,7 @@ export async function createSalesSpreadsheet() {
     body: JSON.stringify({ values: [
       ['fastPOS', 'Relatório de vendas'],
       ['', ''],
-      ['Como funciona', 'Cada fecho cria ou atualiza uma aba com a data do dia.'],
+      ['Como funciona', 'Cada fecho atualiza a aba da data neste dispositivo. Se fechar o mesmo dia noutro dispositivo, é criada uma aba própria (ex.: "AAAA-MM-DD (2)").'],
       ['Privacidade', 'O ficheiro pertence a esta conta Google.'],
       ['Sincronização', 'Os dados são enviados apenas quando fecha ou sincroniza um dia.'],
     ] }),
@@ -151,8 +166,49 @@ async function ensureDailySheet(spreadsheetId, title) {
   return result.replies?.[0]?.addSheet?.properties?.sheetId
 }
 
-export async function syncDailyReport(spreadsheetId, report) {
-  const title = report.date
+// Regista, por data + dispositivo, qual a aba usada. Isto garante que:
+// - o mesmo dispositivo fecha o mesmo dia sempre na mesma aba (atualiza-a);
+// - um dispositivo diferente, ao fechar a mesma data, recebe uma aba nova
+//   em vez de sobrepor os dados já lá guardados.
+async function ensureRegistrySheet(spreadsheetId) {
+  const spreadsheet = await googleFetch(`${SHEETS_API}/${spreadsheetId}?fields=sheets.properties`)
+  const existing = spreadsheet.sheets?.find(sheet => sheet.properties?.title === REGISTRY_TITLE)
+  if (existing) return existing.properties.sheetId
+  const result = await googleFetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: REGISTRY_TITLE, hidden: true, gridProperties: { rowCount: 500, columnCount: 4 } } } }] }),
+  })
+  return result.replies?.[0]?.addSheet?.properties?.sheetId
+}
+
+async function readRegistry(spreadsheetId) {
+  await ensureRegistrySheet(spreadsheetId)
+  const range = encodeURIComponent(`${escapeSheetTitle(REGISTRY_TITLE)}!A1:D500`)
+  const data = await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${range}`)
+  return data.values || []
+}
+
+async function appendRegistryRow(spreadsheetId, row) {
+  const range = encodeURIComponent(`${escapeSheetTitle(REGISTRY_TITLE)}!A1`)
+  await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    method: 'POST',
+    body: JSON.stringify({ values: [row] }),
+  })
+}
+
+async function resolveSheetTitle(spreadsheetId, date, deviceId) {
+  const rows = await readRegistry(spreadsheetId)
+  const dateRows = rows.filter(row => row[0] === date)
+  const own = dateRows.find(row => row[1] === deviceId)
+  if (own?.[2]) return own[2]
+  const title = dateRows.length ? `${date} (${dateRows.length + 1})` : date
+  await appendRegistryRow(spreadsheetId, [date, deviceId, title, new Date().toISOString()])
+  return title
+}
+
+export async function syncDailyReport(spreadsheetId, report, options = {}) {
+  const { deviceId = getDeviceId(), knownTitle = '' } = options
+  const title = knownTitle || await resolveSheetTitle(spreadsheetId, report.date, deviceId)
   const sheetId = await ensureDailySheet(spreadsheetId, title)
   const rangeTitle = escapeSheetTitle(title)
   await googleFetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(`${rangeTitle}!A1:F500`)}:clear`, { method: 'POST', body: '{}' })
@@ -178,6 +234,7 @@ export async function syncDailyReport(spreadsheetId, report) {
       { autoResizeDimensions: { dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 6 } } },
     ] }),
   })
+  return title
 }
 
 export function disconnectGoogleSheets() {

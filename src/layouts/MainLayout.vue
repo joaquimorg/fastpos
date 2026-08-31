@@ -38,7 +38,7 @@
 <script setup>
 import { ref, provide, watch, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { authorizeGoogleSheets, createSalesSpreadsheet, disconnectGoogleSheets, isGoogleSheetsAvailable, syncDailyReport } from '../services/googleSheets'
+import { authorizeGoogleSheets, createSalesSpreadsheet, disconnectGoogleSheets, getDeviceId, isGoogleSheetsAvailable, syncDailyReport } from '../services/googleSheets'
 const logoSrc = '/fastpos-logo.png'
 const route = useRoute()
 const navItems = [
@@ -124,7 +124,7 @@ async function syncStoredReports() {
   const pending = closedDays.value.filter(day => day.status !== 'synced')
   for (const day of pending) {
     try {
-      await syncDailyReport(settings.spreadsheetId, buildDailyReport(day))
+      day.sheetTitle = await syncDailyReport(settings.spreadsheetId, buildDailyReport(day), { deviceId: getDeviceId(), knownTitle: day.sheetTitle })
       day.status = 'synced'; day.syncedAt = new Date().toISOString(); day.error = ''
       googleSheetsSettings.value.lastSync = day.syncedAt
     } catch (error) {
